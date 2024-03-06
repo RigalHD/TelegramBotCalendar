@@ -5,5 +5,5 @@ print("Hello world!")
 
 # Изменение напрямую с гитхаба
 # BETA CHANGE
-# few
+# fewf
 # Привет, Кирилл
