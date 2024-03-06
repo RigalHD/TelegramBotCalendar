@@ -1,5 +1,5 @@
 import asyncio
-import aiogram
+import aiogram # pip install aiogram
 from cfgs import TOKEN
 print("Hello world!")
 
