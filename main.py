@@ -7,3 +7,4 @@ print("Hello world!")
 # BETA CHANGE
 # fewf
 # Привет, Кирилл
+# s = 10
