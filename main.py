@@ -10,6 +10,7 @@ from cfgs import TOKEN
 bot = Bot(TOKEN, parse_mode="HTML")
 dp = Dispatcher()
 
+
 @dp.message(CommandStart())
 async def start(message: Message):
     await message.answer(f"Приветствую, <b>{message.from_user.first_name}</b>", reply_markup=keyboards.main_keyboard)
