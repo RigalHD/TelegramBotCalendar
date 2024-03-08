@@ -13,7 +13,9 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer(f"Приветствую, <b>{message.from_user.first_name}</b>", reply_markup=keyboards.main_keyboard)
+    await message.answer(
+        f"Приветствую, <b>{message.from_user.first_name}</b>",
+        reply_markup=keyboards.main_keyboard)
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
