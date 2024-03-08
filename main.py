@@ -4,10 +4,11 @@ import keyboards
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import Message
+from cfgs import TOKEN
 # from aiogram.types.user import User
 
 
-bot = Bot("6165125073:AAE5hndOrmTNamhAOV6_aNn10aklMveTQFE", parse_mode="HTML")
+bot = Bot(TOKEN, parse_mode="HTML")
 dp = Dispatcher()
 
 @dp.message(CommandStart())
