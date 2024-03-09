@@ -40,3 +40,4 @@ async def db_add_meet(message: Message, command: CommandObject):
                        description, day, time)
                        VALUES (?, ?, ?)""", ("-", *command.args.split()))
         print(cursor.execute("""SELECT * FROM schedule""").fetchall())
+
