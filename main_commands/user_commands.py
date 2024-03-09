@@ -1,5 +1,5 @@
 import asyncio
-import keyboards
+import all_keyboards.keyboards as keyboards
 
 from aiogram import Bot, Router, F
 from aiogram.filters import Command, CommandObject
