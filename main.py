@@ -21,7 +21,6 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
-
 async def main():
     dp.include_routers(
         user_commands.router
