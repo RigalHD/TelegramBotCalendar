@@ -18,3 +18,4 @@ async def calculator(message: Message):
     await message.answer(f"1 + 1 = 2")
 #Я сигма
 #Крипер
+#Свинка
