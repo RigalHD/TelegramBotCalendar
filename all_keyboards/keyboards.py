@@ -8,13 +8,13 @@ from aiogram.types import (
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="расписание"),
+            KeyboardButton(text="Расписание"),
         ],
         [
-            KeyboardButton(text="регистрация"),
+            KeyboardButton(text="Регистрация"),
         ],
         [    
-            KeyboardButton(text="о нас"),
+            KeyboardButton(text="О нас"),
         ]
     ], 
     resize_keyboard=True,

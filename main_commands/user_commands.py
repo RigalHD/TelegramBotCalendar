@@ -2,15 +2,13 @@ import asyncio
 import all_keyboards.keyboards as keyboards
 
 from aiogram import Bot, Router, F
-from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
 router = Router()
-from main import bot
 
 @router.message(F.text.lower() == "регистрация")
 async def command_test(message: Message):
-    await message.answer(f"""гайд на регистрацию тут
+    await message.answer(f"""Гайд на регистрацию тут
                          https://www.youtube.com/watch?v=CBJiJcgmDmM&list=PLEYdORdflM3lkbY2N9mH8pfH_-wPR9q9R&index=2""")
 
 
