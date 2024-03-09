@@ -16,4 +16,4 @@ async def command_test(message: Message):
 @router.message(F.text.lower() == "калькулятор")
 async def calculator(message: Message):
     await message.answer(f"1 + 1 = 2")
-#Я гей
+#Я сигма
