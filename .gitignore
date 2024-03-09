@@ -5,4 +5,6 @@ __pycache__/
 .db
 .gitignore
 
+db.db
+
 cfgs.py

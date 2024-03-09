@@ -6,7 +6,7 @@ from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import Message
 
 from cfgs import TOKEN
-from main_commands import user_commands
+from main_commands import user_commands, work_with_db
 
 
 bot = Bot(TOKEN, parse_mode="HTML")
@@ -23,7 +23,8 @@ async def start(message: Message):
 
 async def main():
     dp.include_routers(
-        user_commands.router
+        user_commands.router,
+        work_with_db.router,
     )
 
     await bot.delete_webhook(drop_pending_updates=True)
