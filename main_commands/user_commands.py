@@ -12,7 +12,7 @@ from main import bot
 async def command_test(message: Message):
     print("ok")
 
-
+# коммент
 @router.message(F.text.lower() == "калькулятор")
 async def calculator(message: Message):
     await message.answer(f"1 + 1 = 2")
