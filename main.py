@@ -1,14 +1,23 @@
 import asyncio
-import keyboards
+import all_keyboards.keyboards as keyboards
 
-from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
 from aiogram.types import Message
-
+from aiogram.fsm.storage.memory import MemoryStorage
 from cfgs import TOKEN
+from main_commands import user_commands, work_with_db
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from datetime import datetime
+
 
 bot = Bot(TOKEN, parse_mode="HTML")
-dp = Dispatcher()
+dp = Dispatcher(storage=MemoryStorage())
+
+
+async def send_msg(bot: Bot):
+    await bot.send_message(997987348, "OK!")
 
 
 @dp.message(CommandStart())
@@ -19,20 +28,25 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
-@dp.message(Command(commands=["test_command"]))
-async def command_test(message: Message, command: CommandObject):
-    pass
-
-
-@dp.message(F.text.lower() == "калькулятор")
-async def calculator(message: Message):
-    await message.answer(f"1 + 1 = 2")
-
-
 async def main():
+    scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+    scheduler.add_job(
+        send_msg, 'cron',
+        second=datetime.now().minute + 1, # second = минута, minute = час
+        start_date=datetime.now(),
+        kwargs={"bot": bot}
+        ) 
+    scheduler.start()
+
+    dp.include_routers(
+        user_commands.router,
+        work_with_db.router,
+    )
+
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
-    print("BOT IS READY TO WORK")
+    while True:
+        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":
