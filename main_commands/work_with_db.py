@@ -1,6 +1,6 @@
 from aiogram.filters import Command, CommandObject
-from aiogram import Bot, Router, F
-from aiogram.types import Message, TelegramObject
+from aiogram import Bot, Router
+from aiogram.types import Message
 import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
@@ -9,19 +9,12 @@ from aiogram.fsm.context import FSMContext
 router = Router()
 
 
-class Form(StatesGroup):
-    description = State()
-    day = State()
-    time = State()
-
-    def __call__(self, event: TelegramObject, raw_state: str | None = None) -> bool:
-        return super().__call__(event, raw_state)
-
 @router.message(Command("db_create"))
 async def db_create(message: Message, command: CommandObject):
     '''Создает базу данных'''
     if message.from_user.id != 997987348:
         await message.answer(text="Отказано в доступе")
+        return
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
         cursor.execute("DROP TABLE schedule")
@@ -31,6 +24,12 @@ async def db_create(message: Message, command: CommandObject):
                        day DATE,
                        time TIME
                        )""")
+
+
+class Form(StatesGroup):
+    description = State()
+    day = State()
+    time = State()
 
 
 @router.message(Command("db_add_meet"))
@@ -62,6 +61,7 @@ async def process_description(message: Message, state: FSMContext) -> None:
     await state.update_data(time=message.text)
     await message.answer(text="ок. ")
     data = await state.get_data()
+    await state.clear()
     full_data = list(data.values())[:-1]
     full_data.append(data["time"] + ":00")
     await message.answer(text=str(data), parse_mode=None)
@@ -69,4 +69,4 @@ async def process_description(message: Message, state: FSMContext) -> None:
         cursor = db.cursor()
         cursor.execute("""INSERT INTO schedule (description, day, time) VALUES (?, ?, ?)""", full_data)
         print(cursor.execute("""SELECT * FROM schedule""").fetchall())
-    await state.clear()
+    
