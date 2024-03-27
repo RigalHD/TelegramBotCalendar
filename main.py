@@ -28,17 +28,8 @@ async def send_msg(bot: Bot):
 
 bot = Bot(TOKEN, parse_mode="HTML")
 dp = Dispatcher()
-scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-scheduler.add_job(lambda: send_msg(bot=Bot), 
-                    trigger='cron', 
-                    hour=datetime.now().hour, 
-                    minute=datetime.now().minute + 1, 
-                    start_date=datetime.now()) 
-scheduler.start()
-print("?")
-# scheduler = BackgroundScheduler(timezone='Europe/Moscow')
-# scheduler.add_job(sendd, 'interval', seconds=5)
-# scheduler.start()
+
+
 def tick():
     print('Tick! The time is: %s' % datetime.now())
 
@@ -53,8 +44,8 @@ async def start(message: Message):
 
 async def main():
     scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-    scheduler.add_job(tick, 'interval', seconds=3)
-    scheduler.add_job(send_msg, 'cron', second=datetime.now().second + 1, start_date=datetime.now(), kwargs={"bot": bot})
+    # scheduler.add_job(tick, 'interval', seconds=3)
+    scheduler.add_job(send_msg, 'cron', minute=datetime.now().minute + 1, start_date=datetime.now(), kwargs={"bot": bot})
     scheduler.start()
 
     dp.include_routers(
