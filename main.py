@@ -4,15 +4,13 @@ import all_keyboards.keyboards as keyboards
 from aiogram import Bot, F, Dispatcher
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import Message
-
+from aiogram.fsm.storage.memory import MemoryStorage
 from cfgs import TOKEN
 from main_commands import user_commands, work_with_db
-
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
-
 
 async def sendd():
     print("!")
@@ -27,7 +25,7 @@ async def send_msg(bot: Bot):
 
 
 bot = Bot(TOKEN, parse_mode="HTML")
-dp = Dispatcher()
+dp = Dispatcher(storage=MemoryStorage())
 
 
 def tick():
@@ -43,10 +41,10 @@ async def start(message: Message):
 
 
 async def main():
-    scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-    # scheduler.add_job(tick, 'interval', seconds=3)
-    scheduler.add_job(send_msg, 'cron', minute=datetime.now().minute + 1, start_date=datetime.now(), kwargs={"bot": bot})
-    scheduler.start()
+    # scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+    # # scheduler.add_job(tick, 'interval', seconds=3)
+    # scheduler.add_job(send_msg, 'cron', minute=datetime.now().minute + 1, start_date=datetime.now(), kwargs={"bot": bot}) # second = минута, minute = час, 
+    # scheduler.start()
 
     dp.include_routers(
         user_commands.router,
@@ -57,6 +55,7 @@ async def main():
     await dp.start_polling(bot)
     while True:
         await asyncio.sleep(1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -6,10 +6,11 @@ from aiogram.types import Message
 
 router = Router()
 
+
 @router.message(F.text.lower() == "регистрация")
 async def command_test(message: Message):
     await message.answer(f"""Гайд на регистрацию тут
-                         https://www.youtube.com/watch?v=CBJiJcgmDmM&list=PLEYdORdflM3lkbY2N9mH8pfH_-wPR9q9R&index=2""")
+                         https://www.youtube.com/watch?v=dQw4w9WgXcQ""")
 
 
 @router.message(F.text.lower() == "расписание")
