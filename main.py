@@ -41,10 +41,9 @@ async def start(message: Message):
 
 
 async def main():
-    # scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-    # # scheduler.add_job(tick, 'interval', seconds=3)
-    # scheduler.add_job(send_msg, 'cron', minute=datetime.now().minute + 1, start_date=datetime.now(), kwargs={"bot": bot}) # second = минута, minute = час, 
-    # scheduler.start()
+    scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+    scheduler.add_job(send_msg, 'cron', second=datetime.now().minute + 1, start_date=datetime.now(), kwargs={"bot": bot}) # second = минута, minute = час, 
+    scheduler.start()
 
     dp.include_routers(
         user_commands.router,
