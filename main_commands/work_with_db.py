@@ -5,6 +5,9 @@ import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
+from main import bot, send_reminder
 
 router = Router()
 
@@ -68,5 +71,18 @@ async def process_description(message: Message, state: FSMContext) -> None:
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
         cursor.execute("""INSERT INTO schedule (description, day, time) VALUES (?, ?, ?)""", full_data)
-        print(cursor.execute("""SELECT * FROM schedule""").fetchall())
-    
+        print(cursor.execute("SELECT * FROM schedule").fetchall())
+                                
+        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+        scheduler.add_job(
+            send_reminder, 'cron',
+            second=datetime.datetime.now().second + 1, # second = минута, minute = час
+            start_date=datetime.datetime.now(),
+            kwargs={"bot": bot},
+            id="main_job"
+            )
+        scheduler.start()
+
+
+
+

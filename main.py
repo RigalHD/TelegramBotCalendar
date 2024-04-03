@@ -1,6 +1,6 @@
 import asyncio
 import all_keyboards.keyboards as keyboards
-
+import sqlite3
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
 from aiogram.types import Message
@@ -28,14 +28,23 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
+async def send_reminder(bot: Bot):
+    with sqlite3.connect("db.db") as db:
+        cursor = db.cursor()
+
+
+    
+scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+scheduler.add_job(
+    send_msg, 'cron',
+    second=datetime.now().second + 1, # second = минута, minute = час
+    start_date=datetime.now(),
+    kwargs={"bot": bot},
+    id="main_job"
+    )
+
 async def main():
-    scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-    scheduler.add_job(
-        send_msg, 'cron',
-        second=datetime.now().minute + 1, # second = минута, minute = час
-        start_date=datetime.now(),
-        kwargs={"bot": bot}
-        ) 
+    global scheduler
     scheduler.start()
 
     dp.include_routers(
