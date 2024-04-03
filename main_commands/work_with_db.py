@@ -25,8 +25,38 @@ async def db_create(message: Message, command: CommandObject):
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        description TEXT,
                        day DATE,
-                       time TIME
+                       time TIME,
+                       expired INTEGER
                        )""")
+
+
+@router.message(Command("Подписаться_на_рассылку"))
+async def db_subscribe_to_the_newsletter(message: Message):
+    '''
+    Эта команда позволяет подписаться
+    на рассылку встреч книжного клуба
+    '''
+    with sqlite3.connect("db.db") as db:
+        cursor = db.cursor()
+        user_data = (
+            message.from_user.id,
+            message.from_user.username,
+            1,
+            datetime.datetime.now()
+            )
+        if message.from_user.id in cursor.execute("SELECT tg_id FROM users").fetchone():
+            await message.answer(text="Вы уже подписаны на рассылку")
+            return
+        
+        cursor.execute("""INSERT INTO users (
+                        tg_id,
+                        username, 
+                        is_subscribed, 
+                        date_of_subscription
+                        ) VALUES (?, ?, ?, ?)""",
+                        user_data 
+                        )
+        await message.answer(text="Вы успешно подписались на рассылку")
 
 
 class Form(StatesGroup):
@@ -67,22 +97,17 @@ async def process_description(message: Message, state: FSMContext) -> None:
     await state.clear()
     full_data = list(data.values())[:-1]
     full_data.append(data["time"] + ":00")
+    full_data.append(0)
     await message.answer(text=str(data), parse_mode=None)
+
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        cursor.execute("""INSERT INTO schedule (description, day, time) VALUES (?, ?, ?)""", full_data)
-        print(cursor.execute("SELECT * FROM schedule").fetchall())
-                                
-        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-        scheduler.add_job(
-            send_reminder, 'cron',
-            second=datetime.datetime.now().second + 1, # second = минута, minute = час
-            start_date=datetime.datetime.now(),
-            kwargs={"bot": bot},
-            id="main_job"
-            )
-        scheduler.start()
-
-
-
-
+        cursor.execute("""
+                       INSERT INTO schedule (
+                       description,
+                       day, 
+                       time, 
+                       expired
+                       ) VALUES (?,?,?,?)""",
+                       full_data
+                       )

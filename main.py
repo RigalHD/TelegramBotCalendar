@@ -28,29 +28,50 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
-async def send_reminder(bot: Bot):
+async def send_reminder(bot: Bot, user_id: int):
+    await bot.send_message(user_id, "Напоминание")
+
+
+async def sender_of_reminds(bot: Bot):
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
+        cursor.execute("""CREATE TABLE IF NOT EXISTS users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tg_id INTEGER UNIQUE,
+            username TEXT,
+            is_subscribed INTEGER,
+            date_of_subscription DATETIME,
+            date_of_unsubscription DATETIME
+        )""")
+        users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
+        # print(users_ids)
+        # print(users_count)
+        # print(cursor.execute("SELECT * FROM users").fetchall())
+        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+        data = cursor.execute("SELECT * FROM schedule").fetchone()
+        hour, minute = data[3].split(":")[:-1]
+        # print(hour, minute)
+        # print(data)
+        for i in range(len(users_ids)):
+            scheduler.add_job(
+                send_reminder, 'cron',
+                second=minute, # second = минута, minute = час
+                minute=hour,
+                start_date=datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
+                kwargs={"bot": bot, "user_id": users_ids[i]},
+                id=f"main_job_{i}"
+                )
+        return scheduler
 
-
-    
-scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-scheduler.add_job(
-    send_msg, 'cron',
-    second=datetime.now().second + 1, # second = минута, minute = час
-    start_date=datetime.now(),
-    kwargs={"bot": bot},
-    id="main_job"
-    )
 
 async def main():
-    global scheduler
-    scheduler.start()
-
     dp.include_routers(
         user_commands.router,
         work_with_db.router,
     )
+
+    scheduler = await sender_of_reminds(bot)
+    scheduler.start()
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
