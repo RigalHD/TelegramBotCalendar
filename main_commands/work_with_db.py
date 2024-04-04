@@ -44,20 +44,22 @@ async def db_subscribe_to_the_newsletter(message: Message):
             1,
             datetime.datetime.now()
             )
-        if message.from_user.id in cursor.execute("SELECT tg_id FROM users").fetchone():
-            await message.answer(text="Вы уже подписаны на рассылку")
-            return
-        
-        cursor.execute("""INSERT INTO users (
-                        tg_id,
-                        username, 
-                        is_subscribed, 
-                        date_of_subscription
-                        ) VALUES (?, ?, ?, ?)""",
-                        user_data 
-                        )
-        await message.answer(text="Вы успешно подписались на рассылку")
-
+        all_users_ids = cursor.execute("SELECT tg_id FROM users").fetchall()
+        if all_users_ids:
+            for id in all_users_ids:
+                if not message.from_user.id in id:
+                    cursor.execute("""INSERT INTO users (
+                    tg_id,
+                    username, 
+                    is_subscribed, 
+                    date_of_subscription
+                    ) VALUES (?, ?, ?, ?)""",
+                    user_data 
+                    )
+                    await message.answer(text="Вы успешно подписались на рассылку")
+                    return
+        await message.answer(text="Вы уже подписаны на рассылку")
+    
 
 class Form(StatesGroup):
     description = State()

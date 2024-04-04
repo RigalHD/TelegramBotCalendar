@@ -28,8 +28,9 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
-async def send_reminder(bot: Bot, user_id: int):
-    await bot.send_message(user_id, "Напоминание")
+async def send_reminder(bot: Bot, users_id: int, info_message: str):
+    for user_id in users_id:
+        await bot.send_message(chat_id=user_id[0], text=info_message)
 
 
 async def sender_of_reminds(bot: Bot):
@@ -44,24 +45,26 @@ async def sender_of_reminds(bot: Bot):
             date_of_unsubscription DATETIME
         )""")
         users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
-        # print(users_ids)
-        # print(users_count)
-        # print(cursor.execute("SELECT * FROM users").fetchall())
         scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
         data = cursor.execute("SELECT * FROM schedule").fetchone()
         hour, minute = data[3].split(":")[:-1]
-        # print(hour, minute)
-        # print(data)
-        for i in range(len(users_ids)):
-            scheduler.add_job(
-                send_reminder, 'cron',
-                second=minute, # second = минута, minute = час
-                minute=hour,
-                start_date=datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-                kwargs={"bot": bot, "user_id": users_ids[i]},
-                id=f"main_job_{i}"
-                )
+
+        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
+        Что на ней будет? - <b>{data[1]}</b>
+        Когда она будет? - <b>{data[2]}</b>
+        Во сколько приходить? - <b>{data[2]}</b> """
+
+        scheduler.add_job(
+            send_reminder, 'cron',
+            minute=int(hour),
+            second=int(minute), # second = минута, minute = час
+            start_date=datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
+            kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
+            id="main_job"
+            )
+        
         return scheduler
+
 
 
 async def main():
@@ -69,10 +72,8 @@ async def main():
         user_commands.router,
         work_with_db.router,
     )
-
-    scheduler = await sender_of_reminds(bot)
-    scheduler.start()
-
+    sch = await sender_of_reminds(bot)
+    sch.start()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
     while True:
