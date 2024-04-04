@@ -12,6 +12,7 @@ async def command_test(message: Message):
     await message.answer(f"""Гайд на регистрацию тут
                          https://www.youtube.com/watch?v=dQw4w9WgXcQ""")
 
+# Все это пока просто плейсхолдеры
 
 @router.message(F.text.lower() == "расписание")
 async def calculator(message: Message):
