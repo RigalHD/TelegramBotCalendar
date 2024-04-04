@@ -46,7 +46,7 @@ async def sender_of_reminds(bot: Bot):
         )""")
         users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
         scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-        data = cursor.execute("SELECT * FROM schedule").fetchone()
+        data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchone()
         hour, minute = data[3].split(":")[:-1]
 
         info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
