@@ -144,7 +144,8 @@ async def db_create(message: Message, command: CommandObject):
                        rating REAL,
                        image BLOB DEFAULT NULL
                        )""")
-
+        
+        
 @router.message(Command("Подписаться_на_рассылку"))
 async def db_subscribe_to_the_newsletter(message: Message):
     '''
