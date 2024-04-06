@@ -86,9 +86,9 @@ async def process_book_rating(message: Message, state: FSMContext) -> None:
 @router.message(BooksForm.image)
 async def process_book_image(message: Message, state: FSMContext) -> None:
     if message.photo:
-        file_info = await bot.get_file(message.photo[-1].file_id)  # Используйте последнее фото, так как оно самое крупное
+        file_info = await bot.get_file(message.photo[-1].file_id)
         downloaded_file = await bot.download_file(file_info.file_path)
-        src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Добавляем расширение .jpg к имени файла
+        src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
         with open(src, 'wb') as new_file:
             new_file.write(downloaded_file.getvalue())
 
