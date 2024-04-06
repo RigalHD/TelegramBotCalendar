@@ -11,4 +11,4 @@ db.db
 
 cfgs.py
 
-FileNotFoundErrors.txt
+*.txt
