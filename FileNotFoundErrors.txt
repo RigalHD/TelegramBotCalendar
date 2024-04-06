@@ -1,1 +1,1 @@
-[Errno 2] No such file or directory: 'bot_images/AgACAgIAAxkBAAIFc2YRjcp3WtKWifiGK8Ms_9WHTYE1AALo3TEbtZCJSOB9g8RJJ5W5AQADAgADeQADNAQ.jpg' - 2024-04-06 21:00:42.275290
+[Errno 2] No such file or directory: 'bot_images/AgACAgIAAxkBAAIFhmYRkkkkRDs1J8d8QoD65YsZFJjxAALo3TEbtZCJSOB9g8RJJ5W5AQADAgADeQADNAQ.jpg' - 2024-04-06 21:19:53.007838

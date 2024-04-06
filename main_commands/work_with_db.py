@@ -114,8 +114,9 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                 await message.answer(text="Книга успешно добавлена")
         except FileNotFoundError as e:
             await message.answer(text="Ошибка при загрузке картинки. Обратитесь к администрации бота BooksClubBot")
-            with open("FileNotFoundErrors.txt", "w+") as file:
+            with open("FileNotFoundErrors.txt", "A+") as file:
                 file.write(f"{e} - {datetime.datetime.now()}")
+                file.write("\n")
 
 
 
