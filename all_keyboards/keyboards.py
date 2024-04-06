@@ -15,6 +15,9 @@ main_keyboard = ReplyKeyboardMarkup(
         ],
         [    
             KeyboardButton(text="О нас"),
+        ],
+        [
+            KeyboardButton(text="Настройки"),
         ]
     ], 
     resize_keyboard=True,
