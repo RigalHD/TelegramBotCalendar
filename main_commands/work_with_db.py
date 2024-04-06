@@ -6,7 +6,6 @@ import datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import asyncio
 from main import bot, send_reminder
 from pprint import pprint
 
@@ -88,31 +87,35 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
     if message.photo:
         file_info = await bot.get_file(message.photo[-1].file_id)
         downloaded_file = await bot.download_file(file_info.file_path)
-        src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
-        with open(src, 'wb') as new_file:
-            new_file.write(downloaded_file.getvalue())
+        try:
+            src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
+            with open(src, 'wb') as new_file:
+                new_file.write(downloaded_file.getvalue())
 
-        with open(src, 'rb') as new_file:
-            await state.update_data(image=new_file.read())
-        await state.update_data(image=src)
-        await message.answer(text="Ок.")
-        data = await state.get_data()
-        pprint(data)
-        await state.clear()
+            with open(src, 'rb') as new_file:
+                await state.update_data(image=new_file.read())
+            await state.update_data(image=src)
+            
+            data = await state.get_data()
+            await state.clear()
 
-        data["year"] = int(data["year"])
-        data["rating"] = float(data["rating"])
+            data["year"] = int(data["year"])
+            data["rating"] = float(data["rating"])
 
-        with sqlite3.connect("db.db") as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                            INSERT INTO books (
-                            name, description, author, genre, 
-                            year, publishing_house, rating, image) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                           (data["name"], data["description"], data["author"], data["genre"],
-                            data["year"], data["publishing_house"], data["rating"], data["image"]))
-            print("Запись добавлена")
+            with sqlite3.connect("db.db") as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                                INSERT INTO books (
+                                name, description, author, genre, 
+                                year, publishing_house, rating, image) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                            (data["name"], data["description"], data["author"], data["genre"],
+                                data["year"], data["publishing_house"], data["rating"], data["image"]))
+                await message.answer(text="Книга успешно добавлена")
+        except FileNotFoundError as e:
+            await message.answer(text="Ошибка при загрузке картинки. Обратитесь к администрации бота BooksClubBot")
+            with open("FileNotFoundErrors.txt", "w+") as file:
+                file.write(f"{e} - {datetime.datetime.now()}")
 
 
 
@@ -145,7 +148,7 @@ async def db_create(message: Message, command: CommandObject):
                        image BLOB DEFAULT NULL
                        )""")
         
-        
+
 @router.message(Command("Подписаться_на_рассылку"))
 async def db_subscribe_to_the_newsletter(message: Message):
     '''
