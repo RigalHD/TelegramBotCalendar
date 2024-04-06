@@ -7,7 +7,7 @@ from aiogram.types import Message
 from aiogram.fsm.storage.memory import MemoryStorage
 from cfgs import TOKEN
 from main_commands import user_commands, work_with_db
-
+from config import GROUP_ID
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 
@@ -17,7 +17,7 @@ dp = Dispatcher(storage=MemoryStorage())
 
 
 async def send_msg(bot: Bot):
-    await bot.send_message(997987348, "OK!")
+    await bot.send_message(4153686151, "OK!")
 
 
 @dp.message(CommandStart())
@@ -29,6 +29,7 @@ async def start(message: Message):
 
 
 async def send_reminder(bot: Bot, users_id: int, info_message: str):
+    await bot.send_message(chat_id=-1002083421437, text=info_message)
     for user_id in users_id:
         await bot.send_message(chat_id=user_id[0], text=info_message)
 
@@ -64,7 +65,6 @@ async def sender_of_reminds(bot: Bot):
             )
         
         return scheduler
-
 
 
 async def main():

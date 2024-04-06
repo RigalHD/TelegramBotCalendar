@@ -3,7 +3,6 @@ import all_keyboards.keyboards as keyboards
 
 from aiogram import Bot, Router, F
 from aiogram.types import Message
-
 router = Router()
 
 
@@ -19,6 +18,11 @@ async def calculator(message: Message):
     await message.answer(f"Тихий час по расписанию")
 
 
-@router.message(F.text.lower() == "о нас")
+@router.message(F.text.lower() == "о нас" )
 async def calculator(message: Message):
-    await message.answer(f"Не лезь не в своё дело")
+    if message.chat.id == -1002083421437:
+        await message.answer(f"О нас")
+    else:
+        await message.answer(f"Не лезь не в своё дело")
+                
+
