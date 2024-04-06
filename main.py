@@ -37,7 +37,8 @@ async def send_reminder(bot: Bot, users_id: int, info_message: str):
 async def sender_of_reminds(bot: Bot):
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        cursor.execute("""CREATE TABLE IF NOT EXISTS users(
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tg_id INTEGER UNIQUE,
             username TEXT,

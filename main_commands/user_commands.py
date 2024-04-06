@@ -8,8 +8,9 @@ router = Router()
 
 @router.message(F.text.lower() == "регистрация")
 async def command_test(message: Message):
-    await message.answer(f"""Гайд на регистрацию тут
-                         https://www.youtube.com/watch?v=dQw4w9WgXcQ""")
+    if message.chat.type == 'private':
+        await message.answer(f"""Гайд на регистрацию тут
+                            https://www.youtube.com/watch?v=dQw4w9WgXcQ""")
 
 # Все это пока просто плейсхолдеры
 

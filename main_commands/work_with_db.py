@@ -8,8 +8,112 @@ from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
 from main import bot, send_reminder
+from pprint import pprint
 
 router = Router()
+
+
+class BooksForm(StatesGroup):
+    name = State()
+    description = State()
+    author = State()
+    genre = State()
+    year = State()
+    publishing_house = State()
+    rating = State()
+    image = State()
+
+
+@router.message(Command("add_book"))
+async def db_add_book(message: Message, state: FSMContext) -> None:
+    '''Добавление книги в базу данных'''
+    if message.from_user.id != 997987348:
+        await message.answer(text="Отказано в доступе")
+        return
+    await state.set_state(BooksForm.name)
+    await message.answer(text="Введите название книги: ")
+
+
+@router.message(BooksForm.name)
+async def process_book_name(message: Message, state: FSMContext) -> None:
+    await state.update_data(name=message.text)
+    await state.set_state(BooksForm.description)
+    await message.answer(text="ок. теперь введите описание: ")
+
+
+@router.message(BooksForm.description)
+async def process_book_description(message: Message, state: FSMContext) -> None:
+    await state.update_data(description=message.text)
+    await state.set_state(BooksForm.author)
+    await message.answer(text="ок. теперь введите автора: ")
+
+
+@router.message(BooksForm.author)
+async def process_book_author(message: Message, state: FSMContext) -> None:
+    await state.update_data(author=message.text)
+    await state.set_state(BooksForm.genre)
+    await message.answer(text="ок. теперь введите жанр: ")
+
+
+@router.message(BooksForm.genre)
+async def process_book_genre(message: Message, state: FSMContext) -> None:
+    await state.update_data(genre=message.text)
+    await state.set_state(BooksForm.year)
+    await message.answer(text="ок. теперь введите год: ")
+    
+
+@router.message(BooksForm.year)
+async def process_book_year(message: Message, state: FSMContext) -> None:
+    await state.update_data(year=message.text)
+    await state.set_state(BooksForm.publishing_house)
+    await message.answer(text="ок. теперь введите издательство: ")
+
+ 
+@router.message(BooksForm.publishing_house)
+async def process_book_publishing_house(message: Message, state: FSMContext) -> None:
+    await state.update_data(publishing_house=message.text)
+    await state.set_state(BooksForm.rating)
+    await message.answer(text="ок. теперь введите рейтинг книги: ")
+    
+
+@router.message(BooksForm.rating)
+async def process_book_rating(message: Message, state: FSMContext) -> None:
+    await state.update_data(rating=message.text)
+    await state.set_state(BooksForm.image)
+    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ")
+    
+
+@router.message(BooksForm.image)
+async def process_book_image(message: Message, state: FSMContext) -> None:
+    if message.photo:
+        file_info = await bot.get_file(message.photo[-1].file_id)  # Используйте последнее фото, так как оно самое крупное
+        downloaded_file = await bot.download_file(file_info.file_path)
+        src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Добавляем расширение .jpg к имени файла
+        with open(src, 'wb') as new_file:
+            new_file.write(downloaded_file.getvalue())
+
+        with open(src, 'rb') as new_file:
+            await state.update_data(image=new_file.read())
+        await state.update_data(image=src)
+        await message.answer(text="Ок.")
+        data = await state.get_data()
+        pprint(data)
+        await state.clear()
+
+        data["year"] = int(data["year"])
+        data["rating"] = float(data["rating"])
+
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                            INSERT INTO books (
+                            name, description, author, genre, 
+                            year, publishing_house, rating, image) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                           (data["name"], data["description"], data["author"], data["genre"],
+                            data["year"], data["publishing_house"], data["rating"], data["image"]))
+            print("Запись добавлена")
+
 
 
 @router.message(Command("db_create"))
@@ -20,7 +124,7 @@ async def db_create(message: Message, command: CommandObject):
         return
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        cursor.execute("DROP TABLE schedule")
+        # cursor.execute("DROP TABLE books")
         cursor.execute("""CREATE TABLE IF NOT EXISTS schedule (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        description TEXT,
@@ -28,7 +132,18 @@ async def db_create(message: Message, command: CommandObject):
                        time TIME,
                        expired INTEGER
                        )""")
-
+        
+        cursor.execute("""CREATE TABLE IF NOT EXISTS books (
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       name TEXT,
+                       description TEXT,
+                       author CHAR,
+                       genre CHAR,
+                       year INTEGER,
+                       publishing_house CHAR,
+                       rating REAL,
+                       image BLOB DEFAULT NULL
+                       )""")
 
 @router.message(Command("Подписаться_на_рассылку"))
 async def db_subscribe_to_the_newsletter(message: Message):
@@ -85,14 +200,14 @@ async def process_description(message: Message, state: FSMContext) -> None:
 
 
 @router.message(Form.day)
-async def process_description(message: Message, state: FSMContext) -> None:
+async def process_day(message: Message, state: FSMContext) -> None:
     await state.update_data(day=message.text)
     await state.set_state(Form.time)
     await message.answer(text="ок. теперь введите время: ")
     
 
 @router.message(Form.time)
-async def process_description(message: Message, state: FSMContext) -> None:
+async def process_time(message: Message, state: FSMContext) -> None:
     await state.update_data(time=message.text)
     await message.answer(text="ок. ")
     data = await state.get_data()
