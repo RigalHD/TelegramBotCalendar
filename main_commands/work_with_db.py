@@ -1,13 +1,16 @@
 from aiogram.filters import Command, CommandObject
 from aiogram import Bot, Router
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from all_keyboards.keyboards import book_age_rating
+from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
 from pprint import pprint
+import all_keyboards
 
 router = Router()
 
@@ -20,6 +23,7 @@ class BooksForm(StatesGroup):
     year = State()
     publishing_house = State()
     rating = State()
+    age_rating = State()
     image = State()
 
 
@@ -78,8 +82,15 @@ async def process_book_publishing_house(message: Message, state: FSMContext) -> 
 @router.message(BooksForm.rating)
 async def process_book_rating(message: Message, state: FSMContext) -> None:
     await state.update_data(rating=message.text)
+    await state.set_state(BooksForm.age_rating)
+    await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating())
+
+
+@router.message(BooksForm.age_rating)
+async def process_book_rating(message: Message, state: FSMContext) -> None:
+    await state.update_data(age_rating=message.text)
     await state.set_state(BooksForm.image)
-    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ")
+    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ", reply_markup=ReplyKeyboardRemove())
     
 
 @router.message(BooksForm.image)
@@ -106,11 +117,11 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                 cursor = db.cursor()
                 cursor.execute("""
                                 INSERT INTO books (
-                                name, description, author, genre, 
-                                year, publishing_house, rating, image) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                                name, description, author, genre, year, 
+                                publishing_house, rating, age_rating, image) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                             (data["name"], data["description"], data["author"], data["genre"],
-                                data["year"], data["publishing_house"], data["rating"], data["image"]))
+                                data["year"], data["publishing_house"], data["rating"], data["age_rating"], data["image"]))
                 await message.answer(text="Книга успешно добавлена")
         except FileNotFoundError as e:
             await message.answer(text="Ошибка при загрузке картинки. Обратитесь к администрации бота BooksClubBot")
@@ -128,7 +139,7 @@ async def db_create(message: Message, command: CommandObject):
         return
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        # cursor.execute("DROP TABLE books")
+        cursor.execute("DROP TABLE books")
         cursor.execute("""CREATE TABLE IF NOT EXISTS schedule (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        description TEXT,
@@ -146,6 +157,7 @@ async def db_create(message: Message, command: CommandObject):
                        year INTEGER,
                        publishing_house CHAR,
                        rating REAL,
+                       age_rating CHAR,
                        image BLOB DEFAULT NULL
                        )""")
         

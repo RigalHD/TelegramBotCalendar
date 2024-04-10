@@ -1,9 +1,8 @@
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup
 )
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
@@ -25,3 +24,13 @@ main_keyboard = ReplyKeyboardMarkup(
     input_field_placeholder="Выберите действие из меню",
     selective=True,
 )
+
+
+def book_age_rating():
+    items = ["7-10", "10-14", "14-18"]
+    builder = ReplyKeyboardBuilder()
+    for item in items:
+        builder.button(text=item)
+    return builder.as_markup()
+
+
