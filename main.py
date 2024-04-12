@@ -24,12 +24,12 @@ async def send_msg(bot: Bot):
 async def start(message: Message):
     await message.answer(
         f"Приветствую, <b>{message.from_user.first_name}</b>",
-        reply_markup=keyboards.main_keyboard)
+        reply_markup=keyboards.main_kb(message.from_user.id))
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
 async def send_reminder(bot: Bot, users_id: int, info_message: str):
-    await bot.send_message(chat_id=-1002083421437, text=info_message)
+    await bot.send_message(chat_id=GROUP_ID, text=info_message)
     for user_id in users_id:
         await bot.send_message(chat_id=user_id[0], text=info_message)
 
@@ -53,13 +53,13 @@ async def sender_of_reminds(bot: Bot):
 
         info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
         Что на ней будет? - <b>{data[1]}</b>
-        Когда она будет? - <b>{data[2]}</b>
+        Когда она будет? - <b>{hour}:{minute}</b>
         Во сколько приходить? - <b>{data[2]}</b> """
 
         scheduler.add_job(
             send_reminder, 'cron',
-            minute=int(hour),
-            second=int(minute), # second = минута, minute = час
+            hour=int(hour),
+            minute=int(minute), 
             start_date=datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
             kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
             id="main_job"

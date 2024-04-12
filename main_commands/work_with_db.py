@@ -10,7 +10,6 @@ from all_keyboards.keyboards import book_age_rating
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
 from pprint import pprint
-import all_keyboards
 
 router = Router()
 
@@ -67,7 +66,11 @@ async def process_book_genre(message: Message, state: FSMContext) -> None:
 
 @router.message(BooksForm.year)
 async def process_book_year(message: Message, state: FSMContext) -> None:
-    await state.update_data(year=message.text)
+    try:
+        await state.update_data(year=int(message.text))
+    except ValueError:
+        await message.answer("Некорректный год")
+        return
     await state.set_state(BooksForm.publishing_house)
     await message.answer(text="ок. теперь введите издательство: ")
 
@@ -81,13 +84,20 @@ async def process_book_publishing_house(message: Message, state: FSMContext) -> 
 
 @router.message(BooksForm.rating)
 async def process_book_rating(message: Message, state: FSMContext) -> None:
-    await state.update_data(rating=message.text)
+    try:
+        await state.update_data(rating=float(message.text))
+    except ValueError:
+        await message.answer("Некорректный рейтинг")
+        return
     await state.set_state(BooksForm.age_rating)
     await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating())
 
 
 @router.message(BooksForm.age_rating)
-async def process_book_rating(message: Message, state: FSMContext) -> None:
+async def process_book_age_rating(message: Message, state: FSMContext) -> None:
+    if message.text not in ("7-10", "10-14", "14-18"):
+        await message.answer(text="Некорректный возрастной рейтинг")
+        return
     await state.update_data(age_rating=message.text)
     await state.set_state(BooksForm.image)
     await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ", reply_markup=ReplyKeyboardRemove())
@@ -110,8 +120,10 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             data = await state.get_data()
             await state.clear()
 
-            data["year"] = int(data["year"])
-            data["rating"] = float(data["rating"])
+            full_data = (
+                data["name"], data["description"], data["author"], data["genre"], int(data["year"]), 
+                data["publishing_house"], float(data["rating"]), data["age_rating"], data["image"]
+                )
 
             with sqlite3.connect("db.db") as db:
                 cursor = db.cursor()
@@ -119,15 +131,19 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                                 INSERT INTO books (
                                 name, description, author, genre, year, 
                                 publishing_house, rating, age_rating, image) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                            (data["name"], data["description"], data["author"], data["genre"],
-                                data["year"], data["publishing_house"], data["rating"], data["age_rating"], data["image"]))
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               """,
+                               full_data
+                )
                 await message.answer(text="Книга успешно добавлена")
         except FileNotFoundError as e:
             await message.answer(text="Ошибка при загрузке картинки. Обратитесь к администрации бота BooksClubBot")
             with open("FileNotFoundErrors.txt", "A+") as file:
                 file.write(f"{e} - {datetime.datetime.now()}")
                 file.write("\n")
+        except ValueError:
+            await message.answer(text="Ошибка при заполнении полей")
+            return
 
 
 
