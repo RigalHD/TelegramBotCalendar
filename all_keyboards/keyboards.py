@@ -1,27 +1,27 @@
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup
-)
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-main_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [
-            KeyboardButton(text="Расписание"),
-        ],
-        [
-            KeyboardButton(text="Регистрация"),
-        ],
-        [    
-            KeyboardButton(text="О нас"),
-        ],
-        [
-            KeyboardButton(text="Настройки"),
-        ]
-    ], 
-    resize_keyboard=True,
-    one_time_keyboard=True,
-    input_field_placeholder="Выберите действие из меню",
-    selective=True,
-)
+
+def main_kb(user_id: int) -> ReplyKeyboardBuilder:
+    items = ["Расписание", "Регистрация", "О нас", "Настройки"]
+    admins = [997987348]
+    if user_id in admins:
+        items.append("/add_book")
+    builder = ReplyKeyboardBuilder()
+    for item in items:
+        builder.button(text=item)
+    
+    return builder.as_markup(
+        resize_keyboard=True,
+        input_field_placeholder="Выберите действие из меню",
+        selective=True,
+        )
+
+
+def book_age_rating():
+    items = ["7-10", "10-14", "14-18"]
+    builder = ReplyKeyboardBuilder()
+    for item in items:
+        builder.button(text=item)
+    return builder.as_markup()
+
+

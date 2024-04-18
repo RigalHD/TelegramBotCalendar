@@ -1,13 +1,15 @@
 from aiogram.filters import Command, CommandObject
 from aiogram import Bot, Router
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from all_keyboards.keyboards import book_age_rating
+from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from pprint import pprint
+
 
 router = Router()
 
@@ -20,6 +22,7 @@ class BooksForm(StatesGroup):
     year = State()
     publishing_house = State()
     rating = State()
+    age_rating = State()
     image = State()
 
 
@@ -63,7 +66,11 @@ async def process_book_genre(message: Message, state: FSMContext) -> None:
 
 @router.message(BooksForm.year)
 async def process_book_year(message: Message, state: FSMContext) -> None:
-    await state.update_data(year=message.text)
+    try:
+        await state.update_data(year=int(message.text))
+    except ValueError:
+        await message.answer("Некорректный год")
+        return
     await state.set_state(BooksForm.publishing_house)
     await message.answer(text="ок. теперь введите издательство: ")
 
@@ -77,9 +84,23 @@ async def process_book_publishing_house(message: Message, state: FSMContext) -> 
 
 @router.message(BooksForm.rating)
 async def process_book_rating(message: Message, state: FSMContext) -> None:
-    await state.update_data(rating=message.text)
+    try:
+        await state.update_data(rating=float(message.text))
+    except ValueError:
+        await message.answer("Некорректный рейтинг")
+        return
+    await state.set_state(BooksForm.age_rating)
+    await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating())
+
+
+@router.message(BooksForm.age_rating)
+async def process_book_age_rating(message: Message, state: FSMContext) -> None:
+    if message.text not in ("7-10", "10-14", "14-18"):
+        await message.answer(text="Некорректный возрастной рейтинг")
+        return
+    await state.update_data(age_rating=message.text)
     await state.set_state(BooksForm.image)
-    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ")
+    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ", reply_markup=ReplyKeyboardRemove())
     
 
 @router.message(BooksForm.image)
@@ -87,6 +108,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
     if message.photo:
         file_info = await bot.get_file(message.photo[-1].file_id)
         downloaded_file = await bot.download_file(file_info.file_path)
+
         try:
             src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
             with open(src, 'wb') as new_file:
@@ -99,23 +121,32 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             data = await state.get_data()
             await state.clear()
 
-            data["year"] = int(data["year"])
-            data["rating"] = float(data["rating"])
+            full_data = (
+                data["name"], data["description"], data["author"], data["genre"], int(data["year"]), 
+                data["publishing_house"], float(data["rating"]), data["age_rating"], data["image"]
+                )
 
             with sqlite3.connect("db.db") as db:
                 cursor = db.cursor()
                 cursor.execute("""
                                 INSERT INTO books (
-                                name, description, author, genre, 
-                                year, publishing_house, rating, image) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                            (data["name"], data["description"], data["author"], data["genre"],
-                                data["year"], data["publishing_house"], data["rating"], data["image"]))
+                                name, description, author, genre, year, 
+                                publishing_house, rating, age_rating, image) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               """,
+                               full_data
+                )
                 await message.answer(text="Книга успешно добавлена")
+
         except FileNotFoundError as e:
             await message.answer(text="Ошибка при загрузке картинки. Обратитесь к администрации бота BooksClubBot")
-            with open("FileNotFoundErrors.txt", "w+") as file:
+            with open("FileNotFoundErrors.txt", "A+") as file:
                 file.write(f"{e} - {datetime.datetime.now()}")
+                file.write("\n")
+
+        except ValueError:
+            await message.answer(text="Ошибка при заполнении полей")
+            return
 
 
 
@@ -127,7 +158,7 @@ async def db_create(message: Message, command: CommandObject):
         return
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        # cursor.execute("DROP TABLE books")
+        cursor.execute("DROP TABLE books")
         cursor.execute("""CREATE TABLE IF NOT EXISTS schedule (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        description TEXT,
@@ -145,6 +176,7 @@ async def db_create(message: Message, command: CommandObject):
                        year INTEGER,
                        publishing_house CHAR,
                        rating REAL,
+                       age_rating CHAR,
                        image BLOB DEFAULT NULL
                        )""")
         
@@ -219,8 +251,9 @@ async def process_time(message: Message, state: FSMContext) -> None:
     full_data = list(data.values())[:-1]
     full_data.append(data["time"] + ":00")
     full_data.append(0)
+    
     await message.answer(text=str(data), parse_mode=None)
-
+    hour, minute = [int(i) for i in data["time"].split(":")]
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
         cursor.execute("""
@@ -232,3 +265,23 @@ async def process_time(message: Message, state: FSMContext) -> None:
                        ) VALUES (?,?,?,?)""",
                        full_data
                        )
+        
+        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
+        Что на ней будет? - <b>{data["description"]}</b>
+        Когда она будет? - <b>{hour}:{minute}</b>
+        Во сколько приходить? - <b>{data["time"]}</b> """
+
+
+        users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
+
+        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+        scheduler.add_job(
+            send_reminder, 'cron',
+            hour=int(hour),
+            minute=int(minute), 
+            start_date=datetime.datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
+            kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
+            id="main_job"
+        )
+
+        scheduler.start()
