@@ -10,3 +10,5 @@ bot_images/*.jpg
 db.db
 
 cfgs.py
+
+*.txt
