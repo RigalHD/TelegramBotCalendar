@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from pprint import pprint
+
 
 router = Router()
 
@@ -108,6 +108,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
     if message.photo:
         file_info = await bot.get_file(message.photo[-1].file_id)
         downloaded_file = await bot.download_file(file_info.file_path)
+
         try:
             src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
             with open(src, 'wb') as new_file:
@@ -136,11 +137,13 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                                full_data
                 )
                 await message.answer(text="Книга успешно добавлена")
+
         except FileNotFoundError as e:
             await message.answer(text="Ошибка при загрузке картинки. Обратитесь к администрации бота BooksClubBot")
             with open("FileNotFoundErrors.txt", "A+") as file:
                 file.write(f"{e} - {datetime.datetime.now()}")
                 file.write("\n")
+
         except ValueError:
             await message.answer(text="Ошибка при заполнении полей")
             return
@@ -248,8 +251,9 @@ async def process_time(message: Message, state: FSMContext) -> None:
     full_data = list(data.values())[:-1]
     full_data.append(data["time"] + ":00")
     full_data.append(0)
+    
     await message.answer(text=str(data), parse_mode=None)
-
+    hour, minute = [int(i) for i in data["time"].split(":")]
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
         cursor.execute("""
@@ -261,3 +265,23 @@ async def process_time(message: Message, state: FSMContext) -> None:
                        ) VALUES (?,?,?,?)""",
                        full_data
                        )
+        
+        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
+        Что на ней будет? - <b>{data["description"]}</b>
+        Когда она будет? - <b>{hour}:{minute}</b>
+        Во сколько приходить? - <b>{data["time"]}</b> """
+
+
+        users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
+
+        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+        scheduler.add_job(
+            send_reminder, 'cron',
+            hour=int(hour),
+            minute=int(minute), 
+            start_date=datetime.datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
+            kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
+            id="main_job"
+        )
+
+        scheduler.start()
