@@ -1,15 +1,22 @@
-import asyncio
 import all_keyboards.keyboards as keyboards
-import sqlite3
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.fsm.storage.memory import MemoryStorage
-from cfgs import TOKEN
-from main_commands import user_commands, work_with_db
-from config import GROUP_ID
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+from main_commands import (
+    user_commands,
+    work_with_db_commands,
+    db_creating_commands
+    )
+
+from config import GROUP_ID
 from datetime import datetime
+from cfgs import TOKEN
+
+import asyncio
+import sqlite3
 
 
 bot = Bot(TOKEN, parse_mode="HTML")
@@ -28,7 +35,7 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
-async def send_reminder(bot: Bot, users_id: int, info_message: str):
+async def send_reminder(bot: Bot, users_id: tuple, info_message: str):
     await bot.send_message(chat_id=GROUP_ID, text=info_message)
     for user_id in users_id:
         await bot.send_message(chat_id=user_id[0], text=info_message)
@@ -48,22 +55,23 @@ async def sender_of_reminds(bot: Bot):
         )""")
         users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
         scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-        data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchone()
-        hour, minute = data[3].split(":")[:-1]
+        all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
+        for i in range(len(all_data)):
+            hour, minute = all_data[i][3].split(":")[:-1]
 
-        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
-        Что на ней будет? - <b>{data[1]}</b>
-        Когда она будет? - <b>{hour}:{minute}</b>
-        Во сколько приходить? - <b>{data[2]}</b> """
+            info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
+            Что на ней будет? - <b>{all_data[i][1]}</b>
+            Когда она будет? - <b>{hour}:{minute}</b>
+            Во сколько приходить? - <b>{all_data[i][2]}</b> """
 
-        scheduler.add_job(
-            send_reminder, 'cron',
-            hour=int(hour),
-            minute=int(minute), 
-            start_date=datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-            kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
-            id="main_job"
-            )
+            scheduler.add_job(
+                send_reminder, 'cron',
+                hour=int(hour),
+                minute=int(minute), 
+                start_date=datetime.now(),  # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
+                kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
+                id="main_job_" + str(i) 
+                )
         
         return scheduler
 
@@ -71,7 +79,8 @@ async def sender_of_reminds(bot: Bot):
 async def main():
     dp.include_routers(
         user_commands.router,
-        work_with_db.router,
+        work_with_db_commands.router,
+        db_creating_commands.router,
     )
     sch = await sender_of_reminds(bot)
     sch.start()

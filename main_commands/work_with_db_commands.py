@@ -1,6 +1,6 @@
-from aiogram.filters import Command, CommandObject
+from aiogram.filters import Command
 from aiogram import Bot, Router
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
@@ -148,38 +148,6 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             await message.answer(text="Ошибка при заполнении полей")
             return
 
-
-
-@router.message(Command("db_create"))
-async def db_create(message: Message, command: CommandObject):
-    '''Создает базу данных'''
-    if message.from_user.id != 997987348:
-        await message.answer(text="Отказано в доступе")
-        return
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        cursor.execute("DROP TABLE books")
-        cursor.execute("""CREATE TABLE IF NOT EXISTS schedule (
-                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       description TEXT,
-                       day DATE,
-                       time TIME,
-                       expired INTEGER
-                       )""")
-        
-        cursor.execute("""CREATE TABLE IF NOT EXISTS books (
-                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       name TEXT,
-                       description TEXT,
-                       author CHAR,
-                       genre CHAR,
-                       year INTEGER,
-                       publishing_house CHAR,
-                       rating REAL,
-                       age_rating CHAR,
-                       image BLOB DEFAULT NULL
-                       )""")
-        
 
 @router.message(Command("Подписаться_на_рассылку"))
 async def db_subscribe_to_the_newsletter(message: Message):
