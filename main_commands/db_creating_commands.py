@@ -22,9 +22,9 @@ async def db_create(message: Message, command: CommandObject):
                        description TEXT,
                        day DATE,
                        time TIME,
-                       expired INTEGER
+                       expired INTEGER,
+                       group_id INTEGER
                        )""")
-        
         cursor.execute("""
                        CREATE TABLE IF NOT EXISTS books (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,3 +39,12 @@ async def db_create(message: Message, command: CommandObject):
                        image BLOB DEFAULT NULL
                        )""")
         
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS users(
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       tg_id INTEGER UNIQUE,
+                       username TEXT,
+                       is_subscribed INTEGER,
+                       date_of_subscription DATETIME,
+                       date_of_unsubscription DATETIME
+                       )""")

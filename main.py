@@ -1,6 +1,6 @@
 import all_keyboards.keyboards as keyboards
 from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -8,10 +8,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from main_commands import (
     user_commands,
     work_with_db_commands,
-    db_creating_commands
+    db_creating_commands,
+    callbacks
     )
 
-from config import GROUP_ID
 from datetime import datetime
 from cfgs import TOKEN
 
@@ -35,8 +35,8 @@ async def start(message: Message):
     await message.answer(f"Ваш айди -> {message.from_user.id}")
 
 
-async def send_reminder(bot: Bot, users_id: tuple, info_message: str):
-    await bot.send_message(chat_id=GROUP_ID, text=info_message)
+async def send_reminder(bot: Bot, users_id: tuple, info_message: str, group_id: int):
+    await bot.send_message(chat_id=group_id, text=info_message)
     for user_id in users_id:
         await bot.send_message(chat_id=user_id[0], text=info_message)
 
@@ -58,7 +58,7 @@ async def sender_of_reminds(bot: Bot):
         all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
         for i in range(len(all_data)):
             hour, minute = all_data[i][3].split(":")[:-1]
-
+            group_id = all_data[i][-1]
             info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
             Что на ней будет? - <b>{all_data[i][1]}</b>
             Когда она будет? - <b>{hour}:{minute}</b>
@@ -69,7 +69,12 @@ async def sender_of_reminds(bot: Bot):
                 hour=int(hour),
                 minute=int(minute), 
                 start_date=datetime.now(),  # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-                kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
+                kwargs={
+                "bot": bot,
+                "users_id": users_ids,
+                "info_message": info_message,
+                "group_id": group_id
+                },
                 id="main_job_" + str(i) 
                 )
         
@@ -81,6 +86,7 @@ async def main():
         user_commands.router,
         work_with_db_commands.router,
         db_creating_commands.router,
+        callbacks.router,
     )
     sch = await sender_of_reminds(bot)
     sch.start()
