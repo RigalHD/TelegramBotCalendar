@@ -75,3 +75,27 @@ def book_info_kb(book_info: dict, book_id: int):
         callback_data=BookInfo(action="return_back", choice="-", column_name="-", book_id=book_id).pack())
         )
     return builder.as_markup()
+
+
+def book_info_additions_kb(book_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(
+        text="Назад",
+        callback_data=BookInfo(action="return_back_to_info", choice="-", column_name="-", book_id=book_id).pack())
+        )
+    with sqlite3.connect("db.db") as db:
+        cursor = db.cursor()
+        books_columns = [
+            column[1] for column in cursor.execute(
+                "PRAGMA table_info(books)"
+                ).fetchall()
+            ]
+        book_info = zip(
+            books_columns,
+            cursor.execute("""SELECT * FROM books WHERE book_id = ?""", (book_id,)).fetchone()
+            )
+    builder.row(InlineKeyboardButton(
+        text=book_info["name"],
+        callback_data=BookList(action="book_check", book_id=book_id).pack())
+        ) 
+    return builder.as_markup()

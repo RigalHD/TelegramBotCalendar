@@ -43,20 +43,32 @@ async def booklist_handler(query: CallbackQuery, callback_data: keyboards.BookLi
 
 @router.callback_query(keyboards.BookInfo.filter(F.action == "book_info_check"))
 async def bookinfo_handler(query: CallbackQuery, callback_data: keyboards.BookList):
-    print(callback_data.column_name)
-
-
-@router.callback_query(keyboards.BookInfo.filter(F.action == "return_back"))
-async def bookinfo_back_handler(query: CallbackQuery, callback_data: keyboards.BookList):
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        books_columns = [column[1] for column in cursor.execute(
-        "PRAGMA table_info(books)").fetchall()]
+        cursor.execute(f"""
+                       SELECT {callback_data.column_name}
+                       FROM books WHERE id = ?
+                       """, (callback_data.book_id,)
+                       )
+        await query.message.edit_caption(caption=f"{cursor.fetchone()[0]}")
+        # await query.message.edit_reply_markup(reply_markup=keyboards.boo)
+        
+
+@router.callback_query(keyboards.BookInfo.filter(F.action == "return_back"))
+async def bookinfo_back_to_info_handler(query: CallbackQuery, callback_data: keyboards.BookList):
+    with sqlite3.connect("db.db") as db:
+        cursor = db.cursor()
+        books_columns = [
+            column[1] for column in cursor.execute(
+                "PRAGMA table_info(books)"
+                ).fetchall()
+            ]
 
         book_info = dict(zip(
             ("Название", "Описание", "Автор", "Жанр", "Год", "Издательство", "Рейтинг", "Возраcт"),
             books_columns[1:-1]
         ))
+
         photo_path = cursor.execute("""
                                     SELECT image
                                     FROM books WHERE id = ?
