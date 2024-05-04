@@ -1,5 +1,4 @@
-from aiogram.types import CallbackQuery, FSInputFile
-from aiogram.types.input_media_photo import InputMediaPhoto
+from aiogram.types import CallbackQuery
 from all_keyboards import keyboards
 from aiogram import Router, F
 

@@ -1,10 +1,9 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
-from aiogram.types.input_media_photo import InputMediaPhoto
-import sqlite3
 
 from utils.database import BookDatabase
+
 
 def main_kb(user_id: int) -> ReplyKeyboardBuilder:
     items = ["Расписание", "Регистрация", "О нас", "Настройки"]
