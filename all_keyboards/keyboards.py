@@ -1,8 +1,10 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
+from aiogram.types.input_media_photo import InputMediaPhoto
 import sqlite3
 
+from utils.database import BookDatabase
 
 def main_kb(user_id: int) -> ReplyKeyboardBuilder:
     items = ["Расписание", "Регистрация", "О нас", "Настройки"]
@@ -39,8 +41,9 @@ def all_books_kb():
         cursor = db.cursor()
         books_dict = {}
         all_books = cursor.execute("SELECT * FROM books").fetchall()
-        books_keys = [column[1] for column in cursor.execute(
-                "PRAGMA table_info(books)").fetchall()]
+        from utils.database import BookDatabase
+        books_keys = BookDatabase.get_colunms_names(full=True)
+        # print(books_keys)
         for book in all_books:
             books_dict[book[0]] = {}
             for key, value in zip(books_keys[1:], book[1:]):
@@ -48,10 +51,13 @@ def all_books_kb():
 
     builder = InlineKeyboardBuilder()
     for book_id in books_dict.keys():
-        builder.row(InlineKeyboardButton(
-            text=books_dict[book_id]["name"],
-            callback_data=BookList(action="book_check", book_id=book_id).pack())
-            ) 
+        try:
+            builder.row(InlineKeyboardButton(
+                text=books_dict[book_id]["name"],
+                callback_data=BookList(action="book_check", book_id=book_id).pack())
+                )
+        except KeyError:
+            print(books_dict)
     return builder.as_markup()
 
 
@@ -62,14 +68,20 @@ class BookInfo(CallbackData, prefix="pag"):
     book_id: int
 
 
-def book_info_kb(book_info: dict, book_id: int):
+def book_info_kb(book_id: int):
     builder = InlineKeyboardBuilder()
-    for key, value in book_info.items():
-        builder.row(InlineKeyboardButton(
-            text=key,
-            callback_data=BookInfo(action="book_info_check", choice=key, column_name=value, book_id=book_id).pack())
-            )
-        print(key)
+    book = BookDatabase(book_id)
+    for key, value in book.get_columns_names_dict().items():
+        try:
+            builder.row(InlineKeyboardButton(
+                text=key,
+                callback_data=BookInfo(action="book_info_check", choice=str(key), column_name=str(value), book_id=book_id).pack())
+                )
+            # print(key, value, book_id, sep="\n")
+        except ValueError:
+            # print("====")
+            # print(key, value, book_id, sep="\n")
+            return
     builder.row(InlineKeyboardButton(
         text="Назад",
         callback_data=BookInfo(action="return_back", choice="-", column_name="-", book_id=book_id).pack())
@@ -83,19 +95,4 @@ def book_info_additions_kb(book_id: int):
         text="Назад",
         callback_data=BookInfo(action="return_back_to_info", choice="-", column_name="-", book_id=book_id).pack())
         )
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        books_columns = [
-            column[1] for column in cursor.execute(
-                "PRAGMA table_info(books)"
-                ).fetchall()
-            ]
-        book_info = zip(
-            books_columns,
-            cursor.execute("""SELECT * FROM books WHERE book_id = ?""", (book_id,)).fetchone()
-            )
-    builder.row(InlineKeyboardButton(
-        text=book_info["name"],
-        callback_data=BookList(action="book_check", book_id=book_id).pack())
-        ) 
     return builder.as_markup()

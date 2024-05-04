@@ -3,6 +3,8 @@ from aiogram import Router
 from aiogram.types import Message
 import sqlite3
 
+from utils.database import BookDatabase
+
 
 router = Router()
 

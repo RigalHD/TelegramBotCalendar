@@ -277,6 +277,7 @@ async def call_test_kb(message: Message, command: CommandObject):
     if message.from_user.id != 997987348:
         await message.answer(text="Отказано в доступе")
         return
-    await message.answer(
-    f"Test kb of books, <b>{message.from_user.first_name}</b>",
+    await message.answer_photo(
+    photo=FSInputFile("bot_images\AgACAgIAAxkBAAIG8mYWyxtxUPk-F19KS1wmhdbCtbpzAAID2TEbA2i5SPP6lfoyvJwZAQADAgADeQADNAQ.jpg"),
+    caption=f"Test kb of books, <b>{message.from_user.first_name}</b>",
     reply_markup=keyboards.all_books_kb())
