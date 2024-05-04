@@ -5,11 +5,6 @@ from aiogram import Router, F
 
 from utils.database import BookDatabase
 
-import sqlite3
-
-
-
-
 router = Router()
 
 

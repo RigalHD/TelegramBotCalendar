@@ -37,18 +37,7 @@ class BookList(CallbackData, prefix="pag"):
 
 
 def all_books_kb():
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        books_dict = {}
-        all_books = cursor.execute("SELECT * FROM books").fetchall()
-        from utils.database import BookDatabase
-        books_keys = BookDatabase.get_colunms_names(full=True)
-        # print(books_keys)
-        for book in all_books:
-            books_dict[book[0]] = {}
-            for key, value in zip(books_keys[1:], book[1:]):
-                books_dict[book[0]][key] = value
-
+    books_dict = BookDatabase.get_all_books()
     builder = InlineKeyboardBuilder()
     for book_id in books_dict.keys():
         try:

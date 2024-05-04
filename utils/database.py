@@ -58,6 +58,53 @@ class BookDatabase(Database):
             print(e)
             return None
     
+    @staticmethod
+    def get_all_books_info() -> tuple:
+        """
+        Возвращает кортеж всех книг
+        """
+        with sqlite3.connect("db.db") as db:
+            try:
+                result = db.cursor().execute(
+                    "SELECT * FROM books"
+                    ).fetchall()
+                return result if result else None
+            except Exception as e:
+                print(e)
+                return None
+    
+    @staticmethod
+    def get_all_books() -> dict:
+        """
+        Возвращает словарь всех книг
+            {
+            айди: {
+            "колонка": "информация",
+            "колонка2": "информация2",
+                },
+            айди2: {
+            "колонка": "информация",
+            "колонка2": "информация2",
+            }, ...
+            }
+        или возвращает None, если возникла ошибка или книг нет
+        """
+        try:
+            books_dict = {}
+            all_books = BookDatabase.get_all_books_info()
+            books_keys = BookDatabase.get_colunms_names(full=True)
+            # print(books_keys)
+            for book in all_books:
+                books_dict[book[0]] = {}
+                for key, value in zip(books_keys[1:], book[1:]):
+                    books_dict[book[0]][key] = value
+            return books_dict if books_dict else None
+        except Exception as e:
+            print(e)
+            return None
+
+
+    
     def get_columns_names_dict(self, full: bool = False) -> dict | None:
         """
         Возвращает словарь c колонками таблицы книг ("Имя колонки на русском": "Имя колонки в таблице")
