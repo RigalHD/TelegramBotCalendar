@@ -102,9 +102,38 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
             return None
-
-
+        
     
+    @staticmethod
+    def get_amount_of_books(amount: int) -> dict:
+        """
+        Возвращает словарь последних книг (по количеству, указанному в параметре amout)
+            {
+            айди: {
+            "колонка": "информация",
+            "колонка2": "информация2",
+                },
+            айди2: {
+            "колонка": "информация",
+            "колонка2": "информация2",
+            }, ...
+            }
+        или возвращает None, если возникла ошибка или книг нет
+        """
+        try:
+            books_dict = {}
+            all_books = BookDatabase.get_all_books_info()[-abs(amount):]
+            books_keys = BookDatabase.get_colunms_names(full=True)
+            # print(books_keys)
+            for book in all_books:
+                books_dict[book[0]] = {}
+                for key, value in zip(books_keys[1:], book[1:]):
+                    books_dict[book[0]][key] = value
+            return books_dict if books_dict else None
+        except Exception as e:
+            print(e)
+            return None
+
     def get_columns_names_dict(self, full: bool = False) -> dict | None:
         """
         Возвращает словарь c колонками таблицы книг ("Имя колонки на русском": "Имя колонки в таблице")
@@ -131,14 +160,14 @@ class BookDatabase(Database):
         о книге или возвращает None, если возникла ошибка или книга не существует
         """
         try:
-            with sqlite3.connect("db.db") as conn:
-                cursor = conn.cursor()
+            with sqlite3.connect("db.db") as db:
+                cursor = db.cursor()
                 book_info = cursor.execute("""
-                                    SELECT *
-                                    FROM books WHERE id = ?
-                                    """,
-                                    (self._id,)
-                                    ).fetchone()
+                    SELECT *
+                    FROM books WHERE id = ?
+                    """,
+                    (self._id,)
+                ).fetchone()
 
             if full:
                 return dict(zip(

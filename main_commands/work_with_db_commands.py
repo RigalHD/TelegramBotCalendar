@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-
+from config import all_books_image_path
 
 router = Router()
 
@@ -271,13 +271,13 @@ async def process_group_id(message: Message, state: FSMContext) -> None:
         scheduler.start()
 
 
-@router.message(Command("test_kb"))
-async def call_test_kb(message: Message, command: CommandObject):
+@router.message(Command("view_books"))
+async def view_books(message: Message, command: CommandObject):
     '''Вызывает тестовую клавиатуру'''
     if message.from_user.id != 997987348:
         await message.answer(text="Отказано в доступе")
         return
     await message.answer_photo(
-    photo=FSInputFile("bot_images\AgACAgIAAxkBAAIG8mYWyxtxUPk-F19KS1wmhdbCtbpzAAID2TEbA2i5SPP6lfoyvJwZAQADAgADeQADNAQ.jpg"),
-    caption=f"Test kb of books, <b>{message.from_user.first_name}</b>",
+    photo=FSInputFile(all_books_image_path),
+    caption=f"Мы рекомендуем вам эти книги",
     reply_markup=keyboards.all_books_kb())

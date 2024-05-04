@@ -1,8 +1,11 @@
-from aiogram.types import CallbackQuery
-from all_keyboards import keyboards
+from aiogram.types.input_media_photo import InputMediaPhoto
+from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
 
 from utils.database import BookDatabase
+from config import all_books_image_path
+from all_keyboards import keyboards
+
 
 router = Router()
 
@@ -16,7 +19,7 @@ async def booklist_handler(query: CallbackQuery, callback_data: keyboards.BookLi
         )
     
     await query.message.edit_caption(
-        caption="Узнай о книге больше",
+        caption=f"Узнай о книге \"{book.get_book_info('name')}\" больше",
         reply_markup=keyboards.book_info_kb(book.id)
         )
 
@@ -27,7 +30,7 @@ async def booklist_handler(query: CallbackQuery, callback_data: keyboards.BookLi
 
 
 @router.callback_query(keyboards.BookInfo.filter(F.action == "book_info_check"))
-async def bookinfo_handler(query: CallbackQuery, callback_data: keyboards.BookList):
+async def bookinfo_handler(query: CallbackQuery, callback_data: keyboards.BookInfo):
     book = BookDatabase(int(callback_data.book_id))
     
     info = book.get_book_info(callback_data.column_name)
@@ -37,9 +40,20 @@ async def bookinfo_handler(query: CallbackQuery, callback_data: keyboards.BookLi
         
 
 @router.callback_query(keyboards.BookInfo.filter(F.action == "return_back_to_info"))
-async def bookinfo_back_to_info_handler(query: CallbackQuery, callback_data: keyboards.BookList):
+async def bookinfo_back_to_info_handler(query: CallbackQuery, callback_data: keyboards.BookInfo):
     book = BookDatabase(int(callback_data.book_id))
     await query.message.edit_caption(
-        caption="Узнай о книге больше",
-        reply_markup=keyboards.book_info_kb(book_id=book.id)
+        caption=f"Узнай о книге \"{book.get_book_info('name')}\" больше",
+        reply_markup=keyboards.book_info_kb(book_id=callback_data.book_id)
     )
+
+
+@router.callback_query(keyboards.BookInfo.filter(F.action == "return_back"))
+async def bookinfo_back_handler(query: CallbackQuery, callback_data: keyboards.BookList):
+    await query.message.edit_media(
+        media=InputMediaPhoto(media=FSInputFile(all_books_image_path))
+        )
+    await query.message.edit_caption(
+        caption=f"Мы рекомендуем вам эти книги",
+        reply_markup=keyboards.all_books_kb())
+

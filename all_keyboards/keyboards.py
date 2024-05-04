@@ -10,7 +10,7 @@ def main_kb(user_id: int) -> ReplyKeyboardBuilder:
     admins = [997987348]
     if user_id in admins:
         items.append("/add_book")
-        items.append("/test_kb")
+        items.append("/view_books")
     builder = ReplyKeyboardBuilder()
     for item in items:
         builder.button(text=item)
@@ -36,7 +36,7 @@ class BookList(CallbackData, prefix="pag"):
 
 
 def all_books_kb():
-    books_dict = BookDatabase.get_all_books()
+    books_dict = BookDatabase.get_amount_of_books(5)
     builder = InlineKeyboardBuilder()
     for book_id in books_dict.keys():
         try:
@@ -63,12 +63,14 @@ def book_info_kb(book_id: int):
         try:
             builder.row(InlineKeyboardButton(
                 text=key,
-                callback_data=BookInfo(action="book_info_check", choice=str(key), column_name=str(value), book_id=book_id).pack())
+                callback_data=BookInfo(
+                    action="book_info_check",
+                    choice=str(key),
+                    column_name=str(value),
+                    book_id=book_id).pack()
+                    )
                 )
-            # print(key, value, book_id, sep="\n")
         except ValueError:
-            # print("====")
-            # print(key, value, book_id, sep="\n")
             return
     builder.row(InlineKeyboardButton(
         text="Назад",
