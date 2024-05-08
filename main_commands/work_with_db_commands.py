@@ -1,15 +1,16 @@
 from aiogram.filters import Command, CommandObject
-from aiogram import Bot, Router
-from aiogram.types import Message, CallbackQuery
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery, FSInputFile
 import sqlite3
 import datetime
+from all_keyboards import keyboards
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from all_keyboards.keyboards import book_age_rating
+from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-
+from config import all_books_image_path
 
 router = Router()
 
@@ -21,7 +22,7 @@ class BooksForm(StatesGroup):
     genre = State()
     year = State()
     publishing_house = State()
-    rating = State()
+    rating = State()    
     age_rating = State()
     image = State()
 
@@ -90,7 +91,7 @@ async def process_book_rating(message: Message, state: FSMContext) -> None:
         await message.answer("Некорректный рейтинг")
         return
     await state.set_state(BooksForm.age_rating)
-    await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating())
+    await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating_kb())
 
 
 @router.message(BooksForm.age_rating)
@@ -149,38 +150,6 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             return
 
 
-
-@router.message(Command("db_create"))
-async def db_create(message: Message, command: CommandObject):
-    '''Создает базу данных'''
-    if message.from_user.id != 997987348:
-        await message.answer(text="Отказано в доступе")
-        return
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        cursor.execute("DROP TABLE books")
-        cursor.execute("""CREATE TABLE IF NOT EXISTS schedule (
-                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       description TEXT,
-                       day DATE,
-                       time TIME,
-                       expired INTEGER
-                       )""")
-        
-        cursor.execute("""CREATE TABLE IF NOT EXISTS books (
-                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       name TEXT,
-                       description TEXT,
-                       author CHAR,
-                       genre CHAR,
-                       year INTEGER,
-                       publishing_house CHAR,
-                       rating REAL,
-                       age_rating CHAR,
-                       image BLOB DEFAULT NULL
-                       )""")
-        
-
 @router.message(Command("Подписаться_на_рассылку"))
 async def db_subscribe_to_the_newsletter(message: Message):
     '''
@@ -216,6 +185,7 @@ class Form(StatesGroup):
     description = State()
     day = State()
     time = State()
+    group_id = State() # временное решение
 
 
 @router.message(Command("db_add_meet"))
@@ -245,12 +215,21 @@ async def process_day(message: Message, state: FSMContext) -> None:
 @router.message(Form.time)
 async def process_time(message: Message, state: FSMContext) -> None:
     await state.update_data(time=message.text)
+    await state.set_state(Form.group_id)
+    await message.answer(text="ок. теперь введите айди нужной группы: ")
+
+
+@router.message(Form.group_id)
+async def process_group_id(message: Message, state: FSMContext) -> None:
+    await state.update_data(group_id=message.text)
     await message.answer(text="ок. ")
     data = await state.get_data()
     await state.clear()
-    full_data = list(data.values())[:-1]
-    full_data.append(data["time"] + ":00")
-    full_data.append(0)
+    full_data = list(data.values())
+    full_data[2] = data["time"] + ":00"
+    group_id = full_data[-1]
+    full_data[-1] = 0
+    full_data.append(group_id)
     
     await message.answer(text=str(data), parse_mode=None)
     hour, minute = [int(i) for i in data["time"].split(":")]
@@ -261,8 +240,9 @@ async def process_time(message: Message, state: FSMContext) -> None:
                        description,
                        day, 
                        time, 
-                       expired
-                       ) VALUES (?,?,?,?)""",
+                       expired,
+                       group_id
+                       ) VALUES (?, ?, ?, ?, ?)""",
                        full_data
                        )
         
@@ -280,8 +260,24 @@ async def process_time(message: Message, state: FSMContext) -> None:
             hour=int(hour),
             minute=int(minute), 
             start_date=datetime.datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-            kwargs={"bot": bot, "users_id": users_ids, "info_message": info_message},
-            id="main_job"
+            kwargs={
+                "bot": bot,
+                "users_id": users_ids,
+                "info_message": info_message,
+                "group_id": group_id
+                },
         )
 
         scheduler.start()
+
+
+@router.message(Command("view_books"))
+async def view_books(message: Message, command: CommandObject):
+    '''Вызывает тестовую клавиатуру'''
+    if message.from_user.id != 997987348:
+        await message.answer(text="Отказано в доступе")
+        return
+    await message.answer_photo(
+    photo=FSInputFile(all_books_image_path),
+    caption=f"Мы рекомендуем вам эти книги",
+    reply_markup=keyboards.all_books_kb())
