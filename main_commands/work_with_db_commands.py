@@ -195,34 +195,56 @@ async def db_add_meet(message: Message, state: FSMContext) -> None:
         await message.answer(text="Отказано в доступе")
         return
     await state.set_state(Form.description)
-    await message.answer(text="Введите описание: ")
+    await message.answer(text="Введите описание встречи: ")
 
 
 @router.message(Form.description)
 async def process_description(message: Message, state: FSMContext) -> None:
     await state.update_data(description=message.text)
     await state.set_state(Form.day)
-    await message.answer(text="ок. теперь введите день: ")
+    await message.answer(text="Введите дату встречи по примеру <b>01.01.2024</b>: ")
 
 
 @router.message(Form.day)
 async def process_day(message: Message, state: FSMContext) -> None:
+    try:
+        data = [int(el) for el in message.text.replace(",", ".").split(".")]
+        data = datetime.date(day=data[0], month=data[1], year=data[2])
+    except ValueError:
+        await message.answer(text="Неверный формат даты")
+        return
+    except IndexError:
+        await message.answer(text="Неверный формат даты")
+        return
     await state.update_data(day=message.text)
     await state.set_state(Form.time)
-    await message.answer(text="ок. теперь введите время: ")
+    await message.answer(text="Введите время встречи по примеру <b>12:01</b>: ")
     
 
 @router.message(Form.time)
 async def process_time(message: Message, state: FSMContext) -> None:
+    try:
+        data = [int(el) for el in message.text.replace(".", ":").split(":")]
+        datetime.time(hour=data[0], minute=data[1])
+    except ValueError:
+        await message.answer(text="Неверный формат времени")
+        return
+    except IndexError:
+        await message.answer(text="Неверный формат времени")
+        return
     await state.update_data(time=message.text)
     await state.set_state(Form.group_id)
-    await message.answer(text="ок. теперь введите айди нужной группы: ")
+    await message.answer(text="ВРЕМЕННО!!! Введите ID группы: ")
 
 
 @router.message(Form.group_id)
 async def process_group_id(message: Message, state: FSMContext) -> None:
+    try:
+        int(message.text)
+    except ValueError:
+        await message.answer(text="Неверный формат ID группы")
+        return
     await state.update_data(group_id=message.text)
-    await message.answer(text="ок. ")
     data = await state.get_data()
     await state.clear()
     full_data = list(data.values())
@@ -269,6 +291,7 @@ async def process_group_id(message: Message, state: FSMContext) -> None:
         )
 
         scheduler.start()
+    await message.answer(text="Встреча успешно добавлена")
 
 
 @router.message(Command("view_books"))

@@ -186,7 +186,7 @@ class BookDatabase(Database):
                     self.get_colunms_names(full=True),
                     book_info
                 ))
-            col_dict = self.get_columns_names_dict(full=True)
+
             if not has_id:
                 result.pop("id")
             if not has_name:
@@ -197,7 +197,7 @@ class BookDatabase(Database):
                 result.pop("image")
 
             if has_rus_copolumns:
-                for el in col_dict.items():
+                for el in self.get_columns_names_dict(full=True).items():
                     if el[1] in result:
                         result[el[0]] = result[el[1]]
                         result.pop(el[1])
