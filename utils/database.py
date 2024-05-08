@@ -154,41 +154,66 @@ class BookDatabase(Database):
             print(e)
             return None
 
-    def get_full_book_info(self, full: bool = False) -> dict | None:
+    def get_full_book_info(
+            self,
+            has_id: bool = False,
+            has_name: bool = True,
+            has_description: bool = True,
+            has_image: bool = False,
+            has_rus_copolumns: bool = False,
+           ) -> dict | None:
         """
         Возвращает словарь c информацией ("Имя колонки в таблицу": "информация")
         о книге или возвращает None, если возникла ошибка или книга не существует
+
+        :param has_id: True - итог без изменений, False - айди книги не будет в итоговом словаре
+        :param has_name: True - итог без изменений, False - название книги не будет в итоговом словаре
+        :param has_description: True - итог без изменений, False - описание книги не будет в итоговом словаре
+        :param has_image: True - итог без изменений, False - обложка книги не будет в итоговом словаре
+        :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке TODO: реализовать
+
         """
         try:
             with sqlite3.connect("db.db") as db:
                 cursor = db.cursor()
-                book_info = cursor.execute("""
+                book_info = list(cursor.execute("""
                     SELECT *
                     FROM books WHERE id = ?
                     """,
                     (self._id,)
-                ).fetchone()
-
-            if full:
-                return dict(zip(
-                    self.get_colunms_names(full=full),
+                ).fetchone())
+            result = dict(zip(
+                    self.get_colunms_names(full=True),
                     book_info
                 ))
-            else:
-                return dict(zip(
-                    self.get_colunms_names(full=full),
-                    book_info[1:-1]
-                ))                   
-                
+            col_dict = self.get_columns_names_dict(full=True)
+            if not has_id:
+                result.pop("id")
+            if not has_name:
+                result.pop("name")
+            if not has_description:
+                result.pop("description")
+            if not has_image:
+                result.pop("image")
+
+            if has_rus_copolumns:
+                for el in col_dict.items():
+                    if el[1] in result:
+                        result[el[0]] = result[el[1]]
+                        result.pop(el[1])
+            return result                
         except Exception as e:
             print(e)
             return None
-    
+        
+        
     def get_book_info(self, column_name: str) -> str | None:
         """
         Возвращает информацию об определенном "свойстве" книги 
         (например, описание, или название, или автор)
+
         :param column_name: название "свойства" (Название колонки в таблице)
+
         """
         try:
             with sqlite3.connect("db.db") as db:

@@ -51,30 +51,33 @@ def all_books_kb():
 
 class BookInfo(CallbackData, prefix="pag"):
     action: str
-    choice: str
-    column_name: str
+    is_description: bool
     book_id: int
 
 
 def book_info_kb(book_id: int):
     builder = InlineKeyboardBuilder()
     book = BookDatabase(book_id)
-    for key, value in book.get_columns_names_dict().items():
-        try:
-            builder.row(InlineKeyboardButton(
-                text=key,
-                callback_data=BookInfo(
-                    action="book_info_check",
-                    choice=str(key),
-                    column_name=str(value),
-                    book_id=book_id).pack()
-                    )
-                )
-        except ValueError:
-            return
+    builder.row(InlineKeyboardButton(
+        text="Описание книги",
+        callback_data=BookInfo(
+            action="book_description_check",
+            is_description=True,
+            book_id=book_id).pack()
+            )
+        )
+    builder.row(InlineKeyboardButton(
+        text="Дополнительная информация о книге",
+        callback_data=BookInfo(
+            action="book_additional_info_check",
+            is_description=False,
+            book_id=book_id).pack()
+            )
+        )
+
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data=BookInfo(action="return_back", choice="-", column_name="-", book_id=book_id).pack())
+        callback_data=BookInfo(action="return_back", is_description=False, book_id=book_id).pack())
         )
     return builder.as_markup()
 
@@ -83,6 +86,6 @@ def book_info_additions_kb(book_id: int):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data=BookInfo(action="return_back_to_info", choice="-", column_name="-", book_id=book_id).pack())
+        callback_data=BookInfo(action="return_back_to_info", is_description=False,book_id=book_id).pack())
         )
     return builder.as_markup()
