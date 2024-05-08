@@ -32,11 +32,10 @@ async def booklist_handler(query: CallbackQuery, callback_data: keyboards.BookLi
 @router.callback_query(keyboards.BookInfo.filter(F.action == "book_description_check"))
 async def book_description_handler(query: CallbackQuery, callback_data: keyboards.BookInfo):
     book = BookDatabase(int(callback_data.book_id))
-    
-    # info = book.get_book_info(callback_data.column_name)
-    # await query.message.edit_caption(
-    #     caption=info,
-    #     reply_markup=keyboards.book_info_additions_kb(book.id))
+    info = book.get_book_info('description')
+    await query.message.edit_caption(
+        caption=info,
+        reply_markup=keyboards.book_info_additions_kb(book.id))
     
 
 @router.callback_query(keyboards.BookInfo.filter(F.action == "book_additional_info_check"))
@@ -46,7 +45,8 @@ async def book_addditional_info_handler(query: CallbackQuery, callback_data: key
     info = "\n" + ("-" * 20) + "\n" + "\n".join(
         [f"{key}: {value} \n{'-' * 20}" for key, value in book.get_full_book_info(
             has_name=False,
-            has_description=False
+            has_description=False,
+            has_rus_copolumns=True
             ).items()]
         )
     await query.message.edit_caption(
