@@ -9,7 +9,8 @@ from main_commands import (
     user_commands,
     work_with_db_commands,
     db_creating_commands,
-    callbacks
+    callbacks,
+    booksview
     )
 
 from datetime import datetime
@@ -87,6 +88,7 @@ async def main():
         work_with_db_commands.router,
         db_creating_commands.router,
         callbacks.router,
+        booksview.router,
     )
     sch = await sender_of_reminds(bot)
     sch.start()

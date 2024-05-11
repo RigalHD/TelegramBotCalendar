@@ -170,7 +170,7 @@ class BookDatabase(Database):
         :param has_name: True - итог без изменений, False - название книги не будет в итоговом словаре
         :param has_description: True - итог без изменений, False - описание книги не будет в итоговом словаре
         :param has_image: True - итог без изменений, False - обложка книги не будет в итоговом словаре
-        :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке TODO: реализовать
+        :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке
 
         """
         try:
@@ -195,13 +195,14 @@ class BookDatabase(Database):
                 result.pop("description")
             if not has_image:
                 result.pop("image")
-
+            if result["rating"] is None: # У книги может быть еще не определен рейтинг
+                result.pop("rating")
             if has_rus_copolumns:
                 for el in self.get_columns_names_dict(full=True).items():
                     if el[1] in result:
                         result[el[0]] = result[el[1]]
                         result.pop(el[1])
-            return result                
+            return result
         except Exception as e:
             print(e)
             return None

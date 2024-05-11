@@ -10,7 +10,7 @@ def main_kb(user_id: int) -> ReplyKeyboardBuilder:
     admins = [997987348]
     if user_id in admins:
         items.append("/add_book")
-        items.append("/view_books")
+        items.append("/view_random_books")
     builder = ReplyKeyboardBuilder()
     for item in items:
         builder.button(text=item)
