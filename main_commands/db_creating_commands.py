@@ -17,7 +17,8 @@ async def db_create(message: Message, command: CommandObject):
         return
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        cursor.execute("DROP TABLE schedule")
+        # cursor.execute("DROP TABLE schedule")
+        
         cursor.execute("""
                        CREATE TABLE IF NOT EXISTS schedule (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,19 +28,8 @@ async def db_create(message: Message, command: CommandObject):
                        expired INTEGER,
                        group_id INTEGER
                        )""")
-        cursor.execute("""
-                       CREATE TABLE IF NOT EXISTS books (
-                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       name TEXT,
-                       description TEXT,
-                       author CHAR,
-                       genre CHAR,
-                       year INTEGER,
-                       publishing_house CHAR,
-                       rating REAL,
-                       age_rating CHAR,
-                       image BLOB DEFAULT NULL
-                       )""")
+        
+        BookDatabase.create_if_not_exists()
         
         cursor.execute("""
                        CREATE TABLE IF NOT EXISTS users(

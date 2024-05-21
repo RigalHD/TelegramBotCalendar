@@ -134,6 +134,27 @@ class BookDatabase(Database):
             print(e)
             return None
 
+    @staticmethod
+    def create_if_not_exists() -> None:
+        """
+        Создает таблицу книг, если таковой не было
+        """
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS books (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    description TEXT,
+                    author CHAR,
+                    genre CHAR,
+                    year INTEGER,
+                    publishing_house CHAR,
+                    rating REAL,
+                    age_rating CHAR,
+                    image BLOB DEFAULT NULL
+                    )""")
+
     def get_columns_names_dict(self, full: bool = False) -> dict | None:
         """
         Возвращает словарь c колонками таблицы книг ("Имя колонки на русском": "Имя колонки в таблице")

@@ -1,24 +1,22 @@
-import all_keyboards.keyboards as keyboards
+import asyncio
+import sqlite3
+from datetime import datetime
+
 from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart, Command, CommandObject
-from aiogram.types import Message
+from aiogram.filters import CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from all_keyboards import inline_keyboards, keyboards
+from cfgs import TOKEN
 from main_commands import (
     user_commands,
     work_with_db_commands,
     db_creating_commands,
     callbacks,
     booksview
-    )
-
-from datetime import datetime
-from cfgs import TOKEN
-
-import asyncio
-import sqlite3
-
+)
 
 bot = Bot(TOKEN, parse_mode="HTML")
 dp = Dispatcher(storage=MemoryStorage())
