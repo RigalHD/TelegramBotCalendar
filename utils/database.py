@@ -3,7 +3,7 @@ from aiogram.types.input_media_photo import InputMediaPhoto
 # from abc import ABC, abstractmethod
 import sqlite3
 import datetime
-
+from typing import Dict
 
 class Database:
     def __init__(self):
@@ -27,6 +27,58 @@ class Database:
             except Exception as e:
                 print(e)
                 return None
+
+
+class InfoDatabase(Database):
+    @staticmethod
+    def renew_table():
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS info(
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT NOT NULL,
+                last_changed DATETIME NOT NULL
+                )"""
+                )
+
+    @staticmethod
+    def add_info(name: str, description: str) -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO info(name, description, last_changed)
+                VALUES(?, ?, ?)
+                """,
+                (name, description, datetime.datetime.now())
+                )
+    
+    @staticmethod
+    def update_info(name: str, description: str) -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                UPDATE info SET description = ?, last_changed = ?
+                WHERE name = ?
+                """,
+                (description, datetime.datetime.now(), name)
+                )
+
+    @staticmethod
+    def get_info() -> Dict[str, str]:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            result = cursor.execute(
+                """
+                SELECT name, description FROM info
+                """
+                ).fetchall()
+            return {column[0]: column[1] for column in result}
+                
 
 
 class AdminDatabase(Database):
@@ -53,7 +105,7 @@ class AdminDatabase(Database):
             with sqlite3.connect("db.db") as db:
                 db.cursor().execute(
                     "INSERT INTO admins (telegram_id, join_date) VALUES (?, ?)",
-                    (admin_id, str(datetime.datetime.now()))
+                    (admin_id, datetime.datetime.now())
                 )
         except Exception as e:
             print(e)
