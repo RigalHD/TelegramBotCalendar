@@ -1,10 +1,15 @@
 from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
+# from abc import ABC, abstractmethod
 import sqlite3
+import datetime
 
 
 class Database:
     def __init__(self):
+        pass
+    
+    def renew_table(self):
         pass
 
     def get_colunms_names(self, table_name: str) -> tuple | None:
@@ -22,6 +27,85 @@ class Database:
             except Exception as e:
                 print(e)
                 return None
+
+
+class AdminDatabase(Database):
+    @staticmethod
+    def renew_table():
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS admins(
+                id INTEGER PRIMARY KEY,
+                telegram_id INTEGER NOT NULL,
+                join_date DATETIME
+                )"""
+                )
+
+    @staticmethod   
+    def add_admin(admin_id: int) -> None:
+        """
+        Добавляет админа в таблицу
+        :param admin_id: telegram id админа
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    "INSERT INTO admins (telegram_id, join_date) VALUES (?, ?)",
+                    (admin_id, str(datetime.datetime.now()))
+                )
+        except Exception as e:
+            print(e)
+            raise e
+
+    @staticmethod
+    def is_admin(user_tg_id: int) -> bool:
+        """
+        Проверяет является ли пользователь админом
+        :param user_tg_id: telegram id пользователя
+        :return: True - админ, False - нет
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                result = bool(db.cursor().execute(
+                    "SELECT EXISTS(SELECT 1 FROM admins WHERE telegram_id = ?)",
+                    (user_tg_id,)
+                ).fetchone()[0])
+                return result
+        except Exception as e:
+            print(e)
+            raise e
+
+    # @staticmethod
+    # def remove_admin(admin_id: int) -> None:
+    #     """
+    #     Удаляет админа из таблицы по внутреннему айди таблицы
+    #     :param admin_id: telegram id админа
+    #     """
+    #     with sqlite3.connect("db.db") as db:
+    #         try:
+    #             db.cursor().execute(
+    #                 "DELETE FROM admins WHERE id = ?",
+    #                 admin_id
+    #             )
+    #         except Exception as e:
+    #             print(e)
+
+    @staticmethod
+    def remove_admin(admin_tg_id: int) -> None:
+        """
+        Удаляет админа из таблицы по его telegram айди
+        :param admin_id: telegram id админа
+        """
+        with sqlite3.connect("db.db") as db:
+            try:
+                db.cursor().execute(
+                    "DELETE FROM admins WHERE telegram_id = ?",
+                    (admin_tg_id,)
+                )
+            except Exception as e:
+                print(e)
 
 
 class BookDatabase(Database):

@@ -1,17 +1,16 @@
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardButton
-
-from utils.database import BookDatabase
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from utils.database import AdminDatabase
 
 
 def main_kb(user_id: int) -> ReplyKeyboardBuilder:
     items = ["Расписание", "Регистрация", "О нас", "Настройки"]
-    admins = [997987348]
-    if user_id in admins:
+    AdminDatabase.renew_table()
+    if AdminDatabase.is_admin(user_tg_id=user_id):
         items.append("/add_book")
         items.append("/view_random_books")
+        
     builder = ReplyKeyboardBuilder()
+
     for item in items:
         builder.button(text=item)
     

@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
+from utils.database import AdminDatabase
 
 router = Router()
 
@@ -27,7 +28,7 @@ class BooksForm(StatesGroup):
 @router.message(Command("add_book"))
 async def db_add_book(message: Message, state: FSMContext) -> None:
     '''Добавление книги в базу данных'''
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     await state.set_state(BooksForm.name)
@@ -191,7 +192,7 @@ class Form(StatesGroup):
 @router.message(Command("db_add_meet"))
 async def db_add_meet(message: Message, state: FSMContext) -> None:
     '''Добавление в расписание новую встречу'''
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     await state.set_state(Form.description)

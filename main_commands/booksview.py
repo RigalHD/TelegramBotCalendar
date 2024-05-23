@@ -3,13 +3,14 @@ from aiogram import Router
 from aiogram.types import Message, FSInputFile
 from all_keyboards import inline_keyboards
 from config import all_books_image_path
+from utils.database import AdminDatabase
 
 router = Router()
 
 
 @router.message(Command("view_random_books"))
 async def view_random_books(message: Message, command: CommandObject):
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     await message.answer_photo(
@@ -21,7 +22,7 @@ async def view_random_books(message: Message, command: CommandObject):
 @router.message(Command("vote_for_books"))
 async def vote_for_books(message: Message, command: CommandObject):
     # ! временная заглушка
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     await message.answer_photo(

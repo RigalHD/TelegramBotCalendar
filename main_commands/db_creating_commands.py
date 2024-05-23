@@ -3,7 +3,7 @@ from aiogram import Router
 from aiogram.types import Message
 import sqlite3
 
-from utils.database import BookDatabase
+from utils.database import BookDatabase, AdminDatabase
 
 
 router = Router()
@@ -12,7 +12,7 @@ router = Router()
 @router.message(Command("db_create"))
 async def db_create(message: Message, command: CommandObject):
     '''Создает базу данных'''
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     with sqlite3.connect("db.db") as db:
