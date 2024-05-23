@@ -7,15 +7,14 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from utils.database import AdminDatabase
 from all_keyboards import keyboards
 from cfgs import TOKEN
 from main_commands import (
+    main_menu_callbacks,
     user_commands,
     work_with_db_commands,
     db_creating_commands,
-    callbacks,
-    booksview
+    booksview,
 )
 
 
@@ -86,7 +85,7 @@ async def main():
         user_commands.router,
         work_with_db_commands.router,
         db_creating_commands.router,
-        callbacks.router,
+        main_menu_callbacks.router,
         booksview.router,
     )
     sch = await sender_of_reminds(bot)

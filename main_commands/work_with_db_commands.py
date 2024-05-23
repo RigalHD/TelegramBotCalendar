@@ -1,17 +1,31 @@
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram import Router
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
+from all_keyboards.inline_keyboards import main_menu_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
 from utils.database import AdminDatabase
+from config import GROUP_ID, main_menu_image_path
 
 router = Router()
+
+
+@router.message(Command("testf"))
+async def testf(message: Message, command: CommandObject):
+    if not AdminDatabase.is_admin(message.from_user.id):
+        await message.answer(text="Отказано в доступе")
+        return
+    await message.answer_photo(
+        photo=FSInputFile(main_menu_image_path),
+        caption="Тест меню",
+        reply_markup=main_menu_kb(message.from_user.id)
+        )
 
 
 class BooksForm(StatesGroup):
@@ -186,7 +200,6 @@ class Form(StatesGroup):
     description = State()
     day = State()
     time = State()
-    group_id = State() # временное решение
 
 
 @router.message(Command("db_add_meet"))
@@ -244,27 +257,21 @@ async def process_time(message: Message, state: FSMContext) -> None:
         await message.answer(text="Неверный формат времени")
         return
     await state.update_data(time=message.text)
-    await state.set_state(Form.group_id)
-    await message.answer(text="ВРЕМЕННО!!! Введите ID группы: ")
 
 
-@router.message(Form.group_id)
-async def process_group_id(message: Message, state: FSMContext) -> None:
-    try:
-        int(message.text)
-    except ValueError:
-        await message.answer(text="Неверный формат ID группы")
-        return
-    await state.update_data(group_id=message.text)
     data = await state.get_data()
+
     await state.clear()
+
     full_data = list(data.values())
+    full_data.append(GROUP_ID)
     full_data[2] = data["time"] + ":00"
     group_id = full_data[-1]
     full_data[-1] = 0
     full_data.append(group_id)
     
     await message.answer(text=str(data), parse_mode=None)
+
     hour, minute = [int(i) for i in data["time"].split(":")]
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
@@ -303,5 +310,3 @@ async def process_group_id(message: Message, state: FSMContext) -> None:
 
         scheduler.start()
     await message.answer(text="Встреча успешно добавлена")
-
-
