@@ -10,6 +10,8 @@ bot_images/*.jpg
 db.db
 
 cfgs.py
+qq.sqlite3
+-- SQLite.sql
 
 FileNotFoundErrors.txt
 *.txt

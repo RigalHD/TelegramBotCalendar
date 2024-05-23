@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 
-from utils.database import BookDatabase, AdminDatabase
+from utils.database import BookDatabase, AdminDatabase, InfoDatabase
 
 
 class MainMenu(CallbackData, prefix="pag"):
@@ -12,6 +12,7 @@ class MainMenu(CallbackData, prefix="pag"):
 
 def main_menu_kb(user_id: int):
     builder = InlineKeyboardBuilder()
+
     builder.row(
         InlineKeyboardButton(
         text="Информация",
@@ -39,45 +40,45 @@ def main_menu_kb(user_id: int):
 
 class InfoView(CallbackData, prefix="pag"):
     action: str
+    description: str = ""
 
 
 def info_view_kb():
     builder = InlineKeyboardBuilder()
-    # @router.message(F.text.lower() == "регистрация")
-    # async def registration(message: Message):
-    #     if message.chat.type == 'private':
-    #         await message.answer(f"""Гайд на регистрацию тут
-    #                             https://www.youtube.com/watch?v=dQw4w9WgXcQ""")
+    InfoDatabase.renew_table()
+    if InfoDatabase.get_info():
+        for key, value in InfoDatabase.get_info().items():
+            builder.row(
+                InlineKeyboardButton(
+                text=key.capitalize(),
+                callback_data=InfoView(
+                    action="Info_check",
+                    description=value
+                    ).pack()
+                ),
+                width=2
+            )
 
-    # # Все это пока просто плейсхолдеры
-
-    # @router.message(F.text.lower() == "расписание")
-    # async def schedule(message: Message):
-    #     await message.answer(f"Тихий час по расписанию")
-
-
-    # @router.message(F.text.lower() == "о нас" )
-    # async def about_us(message: Message):
-    #     await message.answer(f"Не лезь не в свое дело")
-    builder.row(
-            InlineKeyboardButton(
-            text="О нас",
-            callback_data=InfoView(action="About_us").pack()
-            ),
-            width=5
-        )
-    builder.row(
-        InlineKeyboardButton(
-        text="Регистрация",
-        callback_data=InfoView(action="Registration").pack()
-        ),
-        width=5
-    )
     builder.row(
         InlineKeyboardButton(
         text="В главное меню",
         callback_data=MainMenu(action="Return_to_main_menu").pack()
     ))
+    return builder.as_markup()
+
+
+def back_to_info_kb():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+        text="Назад",
+        callback_data=InfoView(
+            action="Return_to_info_view",
+            description="-"
+            ).pack()
+        ),
+        width=2
+    )
     return builder.as_markup()
 
 

@@ -9,8 +9,9 @@ from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards import keyboards
 from cfgs import TOKEN
+from utils import database
 from main_commands import (
-    main_menu_callbacks,
+    main_menu,
     user_commands,
     work_with_db_commands,
     db_creating_commands,
@@ -85,7 +86,7 @@ async def main():
         user_commands.router,
         work_with_db_commands.router,
         db_creating_commands.router,
-        main_menu_callbacks.router,
+        main_menu.router,
         booksview.router,
     )
     sch = await sender_of_reminds(bot)
