@@ -1,10 +1,15 @@
 from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
+# from abc import ABC, abstractmethod
 import sqlite3
-
+import datetime
+from typing import Dict
 
 class Database:
     def __init__(self):
+        pass
+    
+    def renew_table(self):
         pass
 
     def get_colunms_names(self, table_name: str) -> tuple | None:
@@ -22,6 +27,137 @@ class Database:
             except Exception as e:
                 print(e)
                 return None
+
+
+class InfoDatabase(Database):
+    @staticmethod
+    def renew_table():
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS info(
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT NOT NULL,
+                last_changed DATETIME NOT NULL
+                )"""
+                )
+
+    @staticmethod
+    def add_info(name: str, description: str) -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO info(name, description, last_changed)
+                VALUES(?, ?, ?)
+                """,
+                (name, description, datetime.datetime.now())
+                )
+    
+    @staticmethod
+    def update_info(name: str, description: str) -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                UPDATE info SET description = ?, last_changed = ?
+                WHERE name = ?
+                """,
+                (description, datetime.datetime.now(), name)
+                )
+
+    @staticmethod
+    def get_info() -> Dict[str, str]:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            result = cursor.execute(
+                """
+                SELECT name, description FROM info
+                """
+                ).fetchall()
+            return {column[0]: column[1] for column in result}
+                
+
+
+class AdminDatabase(Database):
+    @staticmethod
+    def renew_table():
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS admins(
+                id INTEGER PRIMARY KEY,
+                telegram_id INTEGER NOT NULL,
+                join_date DATETIME
+                )"""
+                )
+
+    @staticmethod   
+    def add_admin(admin_id: int) -> None:
+        """
+        Добавляет админа в таблицу
+        :param admin_id: telegram id админа
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    "INSERT INTO admins (telegram_id, join_date) VALUES (?, ?)",
+                    (admin_id, datetime.datetime.now())
+                )
+        except Exception as e:
+            print(e)
+            raise e
+
+    @staticmethod
+    def is_admin(user_tg_id: int) -> bool:
+        """
+        Проверяет является ли пользователь админом
+        :param user_tg_id: telegram id пользователя
+        :return: True - админ, False - нет
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                result = bool(db.cursor().execute(
+                    "SELECT EXISTS(SELECT 1 FROM admins WHERE telegram_id = ?)",
+                    (user_tg_id,)
+                ).fetchone()[0])
+                return result
+        except Exception as e:
+            print(e)
+            raise e
+
+    # @staticmethod
+    # def remove_admin(admin_id: int) -> None:
+    #     """
+    #     Удаляет админа из таблицы по внутреннему айди таблицы
+    #     :param admin_id: telegram id админа
+    #     """
+    #     with sqlite3.connect("db.db") as db:
+    #         try:
+    #             db.cursor().execute(
+    #                 "DELETE FROM admins WHERE id = ?",
+    #                 admin_id
+    #             )
+    #         except Exception as e:
+    #             print(e)
+
+    @staticmethod
+    def remove_admin(admin_tg_id: int) -> None:
+        """
+        Удаляет админа из таблицы по его telegram айди
+        :param admin_id: telegram id админа
+        """
+        with sqlite3.connect("db.db") as db:
+            try:
+                db.cursor().execute(
+                    "DELETE FROM admins WHERE telegram_id = ?",
+                    (admin_tg_id,)
+                )
+            except Exception as e:
+                print(e)
 
 
 class BookDatabase(Database):
@@ -134,6 +270,27 @@ class BookDatabase(Database):
             print(e)
             return None
 
+    @staticmethod
+    def create_if_not_exists() -> None:
+        """
+        Создает таблицу книг, если таковой не было
+        """
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS books (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    description TEXT,
+                    author CHAR,
+                    genre CHAR,
+                    year INTEGER,
+                    publishing_house CHAR,
+                    rating REAL,
+                    age_rating CHAR,
+                    image BLOB DEFAULT NULL
+                    )""")
+
     def get_columns_names_dict(self, full: bool = False) -> dict | None:
         """
         Возвращает словарь c колонками таблицы книг ("Имя колонки на русском": "Имя колонки в таблице")
@@ -170,7 +327,7 @@ class BookDatabase(Database):
         :param has_name: True - итог без изменений, False - название книги не будет в итоговом словаре
         :param has_description: True - итог без изменений, False - описание книги не будет в итоговом словаре
         :param has_image: True - итог без изменений, False - обложка книги не будет в итоговом словаре
-        :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке TODO: реализовать
+        :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке
 
         """
         try:
@@ -195,13 +352,14 @@ class BookDatabase(Database):
                 result.pop("description")
             if not has_image:
                 result.pop("image")
-
+            if result["rating"] is None: # У книги может быть еще не определен рейтинг
+                result.pop("rating")
             if has_rus_copolumns:
                 for el in self.get_columns_names_dict(full=True).items():
                     if el[1] in result:
                         result[el[0]] = result[el[1]]
                         result.pop(el[1])
-            return result                
+            return result
         except Exception as e:
             print(e)
             return None

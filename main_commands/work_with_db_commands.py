@@ -1,16 +1,15 @@
-from aiogram.filters import Command, CommandObject
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.filters import Command
+from aiogram import Router
+from aiogram.types import Message
 import sqlite3
 import datetime
-from all_keyboards import keyboards
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from config import all_books_image_path
+from utils.database import AdminDatabase
 
 router = Router()
 
@@ -22,7 +21,6 @@ class BooksForm(StatesGroup):
     genre = State()
     year = State()
     publishing_house = State()
-    rating = State()    
     age_rating = State()
     image = State()
 
@@ -30,7 +28,7 @@ class BooksForm(StatesGroup):
 @router.message(Command("add_book"))
 async def db_add_book(message: Message, state: FSMContext) -> None:
     '''Добавление книги в базу данных'''
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     await state.set_state(BooksForm.name)
@@ -79,19 +77,22 @@ async def process_book_year(message: Message, state: FSMContext) -> None:
 @router.message(BooksForm.publishing_house)
 async def process_book_publishing_house(message: Message, state: FSMContext) -> None:
     await state.update_data(publishing_house=message.text)
-    await state.set_state(BooksForm.rating)
-    await message.answer(text="ок. теперь введите рейтинг книги: ")
+    await state.set_state(BooksForm.age_rating)
+    await message.answer(
+        text="ок. теперь выберите возрастной рейтинг картинки ",
+        reply_markup=book_age_rating_kb()
+        )
     
 
-@router.message(BooksForm.rating)
-async def process_book_rating(message: Message, state: FSMContext) -> None:
-    try:
-        await state.update_data(rating=float(message.text))
-    except ValueError:
-        await message.answer("Некорректный рейтинг")
-        return
-    await state.set_state(BooksForm.age_rating)
-    await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating_kb())
+# @router.message(BooksForm.rating)
+# async def process_book_rating(message: Message, state: FSMContext) -> None:
+#     try:
+#         await state.update_data(rating=float(message.text))
+#     except ValueError:
+#         await message.answer("Некорректный рейтинг")
+#         return
+#     await state.set_state(BooksForm.age_rating)
+#     await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating_kb())
 
 
 @router.message(BooksForm.age_rating)
@@ -124,7 +125,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
 
             full_data = (
                 data["name"], data["description"], data["author"], data["genre"], int(data["year"]), 
-                data["publishing_house"], float(data["rating"]), data["age_rating"], data["image"]
+                data["publishing_house"], data["age_rating"], data["image"]
                 )
 
             with sqlite3.connect("db.db") as db:
@@ -132,8 +133,8 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                 cursor.execute("""
                                 INSERT INTO books (
                                 name, description, author, genre, year, 
-                                publishing_house, rating, age_rating, image) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                publishing_house, age_rating, image) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                                """,
                                full_data
                 )
@@ -191,7 +192,7 @@ class Form(StatesGroup):
 @router.message(Command("db_add_meet"))
 async def db_add_meet(message: Message, state: FSMContext) -> None:
     '''Добавление в расписание новую встречу'''
-    if message.from_user.id != 997987348:
+    if not AdminDatabase.is_admin(message.from_user.id):
         await message.answer(text="Отказано в доступе")
         return
     await state.set_state(Form.description)
@@ -202,14 +203,18 @@ async def db_add_meet(message: Message, state: FSMContext) -> None:
 async def process_description(message: Message, state: FSMContext) -> None:
     await state.update_data(description=message.text)
     await state.set_state(Form.day)
-    await message.answer(text="Введите дату встречи по примеру <b>01.01.2024</b>: ")
+    now = datetime.datetime.today().date().strftime("%d.%m.%Y")
+    await message.answer(text=f"Введите дату встречи по примеру <b>{now}</b>: ")
 
 
 @router.message(Form.day)
 async def process_day(message: Message, state: FSMContext) -> None:
     try:
-        data = [int(el) for el in message.text.replace(",", ".").split(".")]
+        data = [int(el) for el in message.text.replace("-", ".").replace(",", ".").split(".")]
         data = datetime.date(day=data[0], month=data[1], year=data[2])
+        if data < datetime.date.today():
+            await message.answer(text="Мы пока не изобрели машину времени")
+            return
     except ValueError:
         await message.answer(text="Неверный формат даты")
         return
@@ -224,8 +229,14 @@ async def process_day(message: Message, state: FSMContext) -> None:
 @router.message(Form.time)
 async def process_time(message: Message, state: FSMContext) -> None:
     try:
-        data = [int(el) for el in message.text.replace(".", ":").split(":")]
-        datetime.time(hour=data[0], minute=data[1])
+        time = [int(el) for el in message.text.replace(".", ":").split(":")]
+        time = datetime.time(hour=time[0], minute=time[1])
+        date = await state.get_data()
+        date = [int(el) for el in date["day"].replace("-", ".").replace(",", ".").split(".")]
+        date = datetime.date(day=date[0], month=date[1], year=date[2])
+        if date == datetime.date.today() and time < datetime.datetime.now().time():
+            await message.answer(text="Мы пока не изобрели машину времени, перемещающую на несколько часов назад")
+            return
     except ValueError:
         await message.answer(text="Неверный формат времени")
         return
@@ -294,13 +305,3 @@ async def process_group_id(message: Message, state: FSMContext) -> None:
     await message.answer(text="Встреча успешно добавлена")
 
 
-@router.message(Command("view_books"))
-async def view_books(message: Message, command: CommandObject):
-    '''Вызывает тестовую клавиатуру'''
-    if message.from_user.id != 997987348:
-        await message.answer(text="Отказано в доступе")
-        return
-    await message.answer_photo(
-    photo=FSInputFile(all_books_image_path),
-    caption=f"Мы рекомендуем вам эти книги",
-    reply_markup=keyboards.all_books_kb())

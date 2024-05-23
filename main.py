@@ -1,22 +1,22 @@
-import all_keyboards.keyboards as keyboards
-from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart, Command, CommandObject
-from aiogram.types import Message
-from aiogram.fsm.storage.memory import MemoryStorage
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
+import sqlite3
+from datetime import datetime
 
+from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from utils.database import AdminDatabase
+from all_keyboards import keyboards
+from cfgs import TOKEN
 from main_commands import (
     user_commands,
     work_with_db_commands,
     db_creating_commands,
-    callbacks
-    )
-
-from datetime import datetime
-from cfgs import TOKEN
-
-import asyncio
-import sqlite3
+    callbacks,
+    booksview
+)
 
 
 bot = Bot(TOKEN, parse_mode="HTML")
@@ -87,6 +87,7 @@ async def main():
         work_with_db_commands.router,
         db_creating_commands.router,
         callbacks.router,
+        booksview.router,
     )
     sch = await sender_of_reminds(bot)
     sch.start()
