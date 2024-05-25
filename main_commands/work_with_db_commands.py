@@ -165,37 +165,6 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             return
 
 
-@router.message(Command("Подписаться_на_рассылку"))
-async def db_subscribe_to_the_newsletter(message: Message):
-    '''
-    Эта команда позволяет подписаться
-    на рассылку встреч книжного клуба
-    '''
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        user_data = (
-            message.from_user.id,
-            message.from_user.username,
-            1,
-            datetime.datetime.now()
-            )
-        all_users_ids = cursor.execute("SELECT tg_id FROM users").fetchall()
-        if all_users_ids:
-            for id in all_users_ids:
-                if not message.from_user.id in id:
-                    cursor.execute("""INSERT INTO users (
-                    tg_id,
-                    username, 
-                    is_subscribed, 
-                    date_of_subscription
-                    ) VALUES (?, ?, ?, ?)""",
-                    user_data 
-                    )
-                    await message.answer(text="Вы успешно подписались на рассылку")
-                    return
-        await message.answer(text="Вы уже подписаны на рассылку")
-    
-
 class Form(StatesGroup):
     description = State()
     day = State()
@@ -291,9 +260,6 @@ async def process_time(message: Message, state: FSMContext) -> None:
         Когда она будет? - <b>{hour}:{minute}</b>
         Во сколько приходить? - <b>{data["time"]}</b> """
 
-
-        users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
-
         scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
         scheduler.add_job(
             send_reminder, 'cron',
@@ -302,7 +268,6 @@ async def process_time(message: Message, state: FSMContext) -> None:
             start_date=datetime.datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
             kwargs={
                 "bot": bot,
-                "users_id": users_ids,
                 "info_message": info_message,
                 "group_id": group_id
                 },
