@@ -2,9 +2,16 @@ from aiogram.types.input_media_photo import InputMediaPhoto
 from aiogram.types import CallbackQuery, FSInputFile, Message
 from aiogram.filters import Command, CommandObject
 from aiogram import Router, F
-
+import sqlite3
 from config import *
 from all_keyboards import inline_keyboards
+from .work_with_db_commands import Form
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
+from main import dp
+import datetime
+from utils.database import AdminDatabase
 
 router = Router()
 
@@ -59,6 +66,23 @@ async def return_to_info_view_handler(query: CallbackQuery, callback_data: inlin
         reply_markup=inline_keyboards.info_view_kb()
     )
 
+
+@router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Admin_panel_view"))
+async def admin_panel_handler(query: CallbackQuery, callback_data: inline_keyboards.AdminPanel):
+    await query.message.edit_media(
+        media=InputMediaPhoto(media=FSInputFile(admin_panel_image_path)),
+    )
+    await query.message.edit_caption(
+        caption="Админ панель",
+        reply_markup=inline_keyboards.admin_panel_kb(callback_data.user_id)
+    )
+
+
+@router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Add_meeting"))
+async def add_meeting_handler(query: CallbackQuery, callback_data: inline_keyboards.AdminPanel):
+    state = FSMContext(storage=dp.storage, key=StorageKey(chat_id=query.message.chat.id, user_id=query.from_user.id, bot_id=query.bot.id))
+    # state.
+    
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Return_to_main_menu"))
 async def return_to_main_menu_handler(query: CallbackQuery, callback_data: inline_keyboards.MainMenu):

@@ -43,7 +43,7 @@ class InfoDatabase(Database):
                 description TEXT NOT NULL,
                 last_changed DATETIME NOT NULL
                 )"""
-                )
+            )
 
     @staticmethod
     def add_info(name: str, description: str) -> None:

@@ -8,6 +8,7 @@ from utils.database import BookDatabase, AdminDatabase, InfoDatabase
 
 class MainMenu(CallbackData, prefix="pag"):
     action: str
+    user_id: int = 0
 
 
 def main_menu_kb(user_id: int):
@@ -31,7 +32,7 @@ def main_menu_kb(user_id: int):
         builder.row(
             InlineKeyboardButton(
             text="Админ панель",
-            callback_data=MainMenu(action="Admin_panel_view").pack()
+            callback_data=MainMenu(action="Admin_panel_view", user_id=user_id).pack(),
             ),
             width=2
         )
@@ -80,6 +81,33 @@ def back_to_info_kb():
         width=2
     )
     return builder.as_markup()
+
+
+class AdminPanel(CallbackData, prefix="pag"):
+    action: str
+    user_id: int
+
+
+def admin_panel_kb(user_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+        text="Добавить встречу",
+        callback_data=AdminPanel(
+            action="Add_meeting",
+            user_id=user_id
+            ).pack()
+        ),
+        width=2
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+        text="В главное меню",
+        callback_data=MainMenu(action="Return_to_main_menu").pack()
+    ))
+    return builder.as_markup()
+
 
 
 class BookList(CallbackData, prefix="pag"):
