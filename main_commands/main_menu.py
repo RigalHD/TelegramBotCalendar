@@ -79,10 +79,10 @@ async def admin_panel_handler(query: CallbackQuery, callback_data: inline_keyboa
 
 
 @router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Add_meeting"))
-async def add_meeting_handler(query: CallbackQuery, callback_data: inline_keyboards.AdminPanel):
-    state = FSMContext(storage=dp.storage, key=StorageKey(chat_id=query.message.chat.id, user_id=query.from_user.id, bot_id=query.bot.id))
-    # state.
-    
+async def add_meeting_handler(query: CallbackQuery, state: FSMContext):
+    await state.set_state(Form.description)
+    await query.message.answer("Введите описание:")
+
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Return_to_main_menu"))
 async def return_to_main_menu_handler(query: CallbackQuery, callback_data: inline_keyboards.MainMenu):
