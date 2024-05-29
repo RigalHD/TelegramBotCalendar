@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
 from config import *
 from all_keyboards import inline_keyboards
-from .work_with_db_commands import Form, BooksForm
+from .work_with_db_commands import MeetingsForm, BooksForm
 from aiogram.fsm.context import FSMContext
 from utils.database import AdminDatabase
 
@@ -77,7 +77,7 @@ async def add_meeting_handler(query: CallbackQuery, state: FSMContext):
     if not AdminDatabase.is_admin(query.from_user.id):
         await query.message.answer(text="Отказано в доступе")
         return
-    await state.set_state(Form.description)
+    await state.set_state(MeetingsForm.description)
     await query.message.answer("Введите описание:")
 
 

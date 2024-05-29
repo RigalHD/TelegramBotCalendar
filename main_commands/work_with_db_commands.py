@@ -145,7 +145,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file.getvalue())
-                
+
             await state.update_data(image=src)
             
             data = await state.get_data()
@@ -179,31 +179,31 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             return
 
 
-class Form(StatesGroup):
+class MeetingsForm(StatesGroup):
     description = State()
     day = State()
     time = State()
 
 
-@router.message(Command("db_add_meet"))
-async def db_add_meet(message: Message, state: FSMContext) -> None:
-    '''Добавление в расписание новую встречу'''
-    if not AdminDatabase.is_admin(message.from_user.id):
-        await message.answer(text="Отказано в доступе")
-        return
-    await state.set_state(Form.description)
-    await message.answer(text="Введите описание встречи: ")
+# @router.message(Command("db_add_meet"))
+# async def db_add_meet(message: Message, state: FSMContext) -> None:
+#     '''Добавление в расписание новую встречу'''
+#     if not AdminDatabase.is_admin(message.from_user.id):
+#         await message.answer(text="Отказано в доступе")
+#         return
+#     await state.set_state(MeetingsForm.description)
+#     await message.answer(text="Введите описание встречи: ")
 
 
-@router.message(Form.description)
+@router.message(MeetingsForm.description)
 async def process_description(message: Message, state: FSMContext) -> None:
     await state.update_data(description=message.text)
-    await state.set_state(Form.day)
+    await state.set_state(MeetingsForm.day)
     now = datetime.datetime.today().date().strftime("%d.%m.%Y")
     await message.answer(text=f"Введите дату встречи по примеру <b>{now}</b>: ")
 
 
-@router.message(Form.day)
+@router.message(MeetingsForm.day)
 async def process_day(message: Message, state: FSMContext) -> None:
     try:
         data = [int(el) for el in message.text.replace("-", ".").replace(",", ".").split(".")]
@@ -218,11 +218,11 @@ async def process_day(message: Message, state: FSMContext) -> None:
         await message.answer(text="Неверный формат даты")
         return
     await state.update_data(day=message.text)
-    await state.set_state(Form.time)
+    await state.set_state(MeetingsForm.time)
     await message.answer(text="Введите время встречи по примеру <b>12:01</b>: ")
     
 
-@router.message(Form.time)
+@router.message(MeetingsForm.time)
 async def process_time(message: Message, state: FSMContext) -> None:
     try:
         time = [int(el) for el in message.text.replace(".", ":").split(":")]
