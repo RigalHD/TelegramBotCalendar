@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
 from config import *
 from all_keyboards import inline_keyboards
-from .work_with_db_commands import MeetingsForm, BooksForm
+from .states import MeetingsForm, BooksForm
 from aiogram.fsm.context import FSMContext
 from utils.database import AdminDatabase
 

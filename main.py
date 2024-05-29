@@ -12,8 +12,8 @@ from cfgs import TOKEN
 from utils import database
 from main_commands import (
     main_menu,
+    states,
     user_commands,
-    work_with_db_commands,
     db_creating_commands,
     booksview,
 )
@@ -71,7 +71,7 @@ async def sender_of_reminds(bot: Bot):
 async def main():
     dp.include_routers(
         user_commands.router,
-        work_with_db_commands.router,
+        states.router,
         db_creating_commands.router,
         main_menu.router,
         booksview.router,
