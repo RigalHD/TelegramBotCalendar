@@ -45,9 +45,9 @@ async def info_view_handler(query: CallbackQuery, callback_data: inline_keyboard
 @router.callback_query(inline_keyboards.InfoView.filter(F.action == "Info_check"))
 async def info_check_handler(query: CallbackQuery, callback_data: inline_keyboards.InfoView):
     await query.message.edit_caption(
-        caption=str(InfoDatabase.get_info()[callback_data.name]),
+        caption=str(InfoDatabase.get_info()[callback_data.name]), # ! !!!!!!!
         reply_markup=inline_keyboards.back_to_info_kb(),
-        parse_mode=None
+        parse_mode=None 
     )
 
 
