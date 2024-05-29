@@ -12,6 +12,7 @@ from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
 from utils.database import AdminDatabase
 from config import GROUP_ID, main_menu_image_path
+import os
 
 router = Router()
 
@@ -39,42 +40,49 @@ class BooksForm(StatesGroup):
     image = State()
 
 
-@router.message(Command("add_book"))
-async def db_add_book(message: Message, state: FSMContext) -> None:
-    '''Добавление книги в базу данных'''
-    if not AdminDatabase.is_admin(message.from_user.id):
-        await message.answer(text="Отказано в доступе")
-        return
-    await state.set_state(BooksForm.name)
-    await message.answer(text="Введите название книги: ")
+# @router.message(Command("add_book"))
+# async def db_add_book(message: Message, state: FSMContext) -> None:
+#     '''Добавление книги в базу данных'''
+#     if not AdminDatabase.is_admin(message.from_user.id):
+#         await message.answer(text="Отказано в доступе")
+#         return
+#     await state.set_state(BooksForm.name)
+#     await message.answer(text="Введите название книги: ")
 
 
 @router.message(BooksForm.name)
 async def process_book_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
     await state.set_state(BooksForm.description)
-    await message.answer(text="ок. теперь введите описание: ")
+    await message.answer(text="Введите описание книги: ")
 
 
 @router.message(BooksForm.description)
 async def process_book_description(message: Message, state: FSMContext) -> None:
+    if len(message.text) > 1024:
+        await message.answer(
+            text="Описание книги слишком длинное.\n"
+            "Описание должно быть меньше или равно 1024 символам.\n"
+            "Введите другое описание книги:"
+            )
+        return
     await state.update_data(description=message.text)
     await state.set_state(BooksForm.author)
-    await message.answer(text="ок. теперь введите автора: ")
+    await message.answer(text="Введите автора книги: : ")
 
 
 @router.message(BooksForm.author)
 async def process_book_author(message: Message, state: FSMContext) -> None:
     await state.update_data(author=message.text)
     await state.set_state(BooksForm.genre)
-    await message.answer(text="ок. теперь введите жанр: ")
+    await message.answer(text="Введите жанр книги: ")
 
 
 @router.message(BooksForm.genre)
 async def process_book_genre(message: Message, state: FSMContext) -> None:
     await state.update_data(genre=message.text)
     await state.set_state(BooksForm.year)
-    await message.answer(text="ок. теперь введите год: ")
+    await message.answer(text="Введите год, когда книга была выпущена (Пример: 2024): ")
     
 
 @router.message(BooksForm.year)
@@ -82,10 +90,10 @@ async def process_book_year(message: Message, state: FSMContext) -> None:
     try:
         await state.update_data(year=int(message.text))
     except ValueError:
-        await message.answer("Некорректный год")
+        await message.answer("Некорректный год\nВведите год по такому формату: 2024 ")
         return
     await state.set_state(BooksForm.publishing_house)
-    await message.answer(text="ок. теперь введите издательство: ")
+    await message.answer(text="Введите издательство книги: ")
 
  
 @router.message(BooksForm.publishing_house)
@@ -93,7 +101,10 @@ async def process_book_publishing_house(message: Message, state: FSMContext) -> 
     await state.update_data(publishing_house=message.text)
     await state.set_state(BooksForm.age_rating)
     await message.answer(
-        text="ок. теперь выберите возрастной рейтинг картинки ",
+        text="У вас появилась клавиатура.\n"
+        "Выберите в ней возрастной рейтинг.\n"
+        "Если по каким-либо причинам Вы не можете воспользоваться клавиатурой, "
+        "то отправьте возрастной рейтинг, выбрав его отсюда: <b>7-10, 10-14, 14-18</b>",
         reply_markup=book_age_rating_kb()
         )
     
@@ -116,7 +127,10 @@ async def process_book_age_rating(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(age_rating=message.text)
     await state.set_state(BooksForm.image)
-    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ", reply_markup=ReplyKeyboardRemove())
+    await message.answer(text=
+                         "Теперь отправьте боту файл с обложкой книги или просто загрузите фото: ", 
+                         reply_markup=ReplyKeyboardRemove()
+                         )
     
 
 @router.message(BooksForm.image)
@@ -126,12 +140,12 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
         downloaded_file = await bot.download_file(file_info.file_path)
 
         try:
+            if not os.path.isdir("bot_images/"):
+                os.makedirs("bot_images/")
             src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file.getvalue())
-
-            with open(src, 'rb') as new_file:
-                await state.update_data(image=new_file.read())
+                
             await state.update_data(image=src)
             
             data = await state.get_data()

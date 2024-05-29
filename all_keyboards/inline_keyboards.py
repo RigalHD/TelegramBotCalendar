@@ -103,6 +103,17 @@ def admin_panel_kb(user_id: int):
 
     builder.row(
         InlineKeyboardButton(
+        text="Добавить книгу",
+        callback_data=AdminPanel(
+            action="Add_book",
+            user_id=user_id
+            ).pack()
+        ),
+        width=2
+    )
+
+    builder.row(
+        InlineKeyboardButton(
         text="В главное меню",
         callback_data=MainMenu(action="Return_to_main_menu").pack()
     ))

@@ -1,16 +1,10 @@
 from aiogram.types.input_media_photo import InputMediaPhoto
-from aiogram.types import CallbackQuery, FSInputFile, Message
-from aiogram.filters import Command, CommandObject
+from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
-import sqlite3
 from config import *
 from all_keyboards import inline_keyboards
-from .work_with_db_commands import Form
-from aiogram.fsm.state import State, StatesGroup
+from .work_with_db_commands import Form, BooksForm
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.base import StorageKey
-from main import dp
-import datetime
 from utils.database import AdminDatabase
 
 router = Router()
@@ -80,8 +74,20 @@ async def admin_panel_handler(query: CallbackQuery, callback_data: inline_keyboa
 
 @router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Add_meeting"))
 async def add_meeting_handler(query: CallbackQuery, state: FSMContext):
+    if not AdminDatabase.is_admin(query.from_user.id):
+        await query.message.answer(text="Отказано в доступе")
+        return
     await state.set_state(Form.description)
     await query.message.answer("Введите описание:")
+
+
+@router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Add_book"))
+async def add_book_handler(query: CallbackQuery, state: FSMContext):
+    if not AdminDatabase.is_admin(query.from_user.id):
+        await query.message.answer(text="Отказано в доступе")
+        return
+    await state.set_state(BooksForm.name)
+    await query.message.answer(text="Введите название книги: ")
 
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Return_to_main_menu"))
@@ -93,4 +99,3 @@ async def return_to_main_menu_handler(query: CallbackQuery, callback_data: inlin
         caption="Главное меню",
         reply_markup=inline_keyboards.main_menu_kb(query.from_user.id)
     )
-

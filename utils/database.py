@@ -172,6 +172,19 @@ class BookDatabase(Database):
             "ID", "Название", "Описание", "Автор", "Жанр",
             "Год", "Издательство", "Рейтинг", "Возраcт", "Обложка"
             )
+        
+    @staticmethod
+    def remove_book_by_id(id: int) -> None:
+        """
+        Удаляет книгу по ее айди
+        :param id: id книги в таблице
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute("DELETE FROM books WHERE id = ?", (id,))
+        except Exception as e:
+            print(e)
+
     
     @staticmethod
     def get_colunms_names(full: bool = False) -> list | None:
@@ -415,6 +428,7 @@ class BookDatabase(Database):
         
         except Exception as e:
             print(e)
+
             return None
     
     @property

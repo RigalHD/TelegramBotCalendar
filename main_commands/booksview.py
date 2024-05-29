@@ -23,22 +23,20 @@ async def view_random_books(message: Message, command: CommandObject):
     reply_markup=inline_keyboards.all_books_kb())
 
 
-@router.message(Command("vote_for_books"))
-async def vote_for_books(message: Message, command: CommandObject):
-    # ! временная заглушка
-    if not AdminDatabase.is_admin(message.from_user.id):
-        await message.answer(text="Отказано в доступе")
-        return
-    await message.answer_photo(
-    photo=FSInputFile(all_books_image_path),
-    caption=f"Мы рекомендуем вам эти книги",
-    reply_markup=inline_keyboards.all_books_kb())
+# @router.message(Command("vote_for_books"))
+# async def vote_for_books(message: Message, command: CommandObject):
+#     if not AdminDatabase.is_admin(message.from_user.id):
+#         await message.answer(text="Отказано в доступе")
+#         return
+#     await message.answer_photo(
+#     photo=FSInputFile(all_books_image_path),
+#     caption=f"Мы рекомендуем вам эти книги",
+#     reply_markup=inline_keyboards.all_books_kb())
 
 
 @router.callback_query(inline_keyboards.BookList.filter(F.action == "book_check"))
 async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards.BookList):
     book = BookDatabase(int(callback_data.book_id))
-
     await query.message.edit_media(
         media=book.get_book_photo(FSINPUTFILE=False),
         )
