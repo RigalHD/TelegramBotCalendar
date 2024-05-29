@@ -68,6 +68,18 @@ class InfoDatabase(Database):
                 """,
                 (description, datetime.datetime.now(), name)
                 )
+            
+    @staticmethod
+    def remove_info(name: str) -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                DELETE FROM info
+                WHERE name = ?
+                """,
+                (name,)
+                )
 
     @staticmethod
     def get_info() -> Dict[str, str]:

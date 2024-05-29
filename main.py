@@ -21,7 +21,7 @@ from main_commands import (
 
 bot = Bot(TOKEN, parse_mode="HTML")
 dp = Dispatcher(storage=MemoryStorage())
-
+database.InfoDatabase.remove_info("wqre")
 
 async def send_msg(bot: Bot):
     await bot.send_message(4153686151, "OK!")

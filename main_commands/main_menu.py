@@ -3,9 +3,9 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
 from config import *
 from all_keyboards import inline_keyboards
-from .states import MeetingsForm, BooksForm
+from .states import MeetingsForm, BooksForm, InfoForm
 from aiogram.fsm.context import FSMContext
-from utils.database import AdminDatabase
+from utils.database import AdminDatabase, InfoDatabase
 
 router = Router()
 
@@ -45,8 +45,9 @@ async def info_view_handler(query: CallbackQuery, callback_data: inline_keyboard
 @router.callback_query(inline_keyboards.InfoView.filter(F.action == "Info_check"))
 async def info_check_handler(query: CallbackQuery, callback_data: inline_keyboards.InfoView):
     await query.message.edit_caption(
-        caption=callback_data.description,
-        reply_markup=inline_keyboards.back_to_info_kb()
+        caption=str(InfoDatabase.get_info()[callback_data.name]),
+        reply_markup=inline_keyboards.back_to_info_kb(),
+        parse_mode=None
     )
 
 
@@ -63,12 +64,15 @@ async def return_to_info_view_handler(query: CallbackQuery, callback_data: inlin
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Admin_panel_view"))
 async def admin_panel_handler(query: CallbackQuery, callback_data: inline_keyboards.AdminPanel):
+    if not AdminDatabase.is_admin(query.from_user.id):
+        await query.message.answer(text="Отказано в доступе")
+        return
     await query.message.edit_media(
         media=InputMediaPhoto(media=FSInputFile(admin_panel_image_path)),
     )
     await query.message.edit_caption(
         caption="Админ панель",
-        reply_markup=inline_keyboards.admin_panel_kb(callback_data.user_id)
+        reply_markup=inline_keyboards.admin_panel_kb()
     )
 
 
@@ -88,6 +92,15 @@ async def add_book_handler(query: CallbackQuery, state: FSMContext):
         return
     await state.set_state(BooksForm.name)
     await query.message.answer(text="Введите название книги: ")
+
+
+@router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Add_info"))
+async def add_info_handler(query: CallbackQuery, state: FSMContext):
+    if not AdminDatabase.is_admin(query.from_user.id):
+        await query.message.answer(text="Отказано в доступе")
+        return
+    await state.set_state(InfoForm.name)
+    await query.message.answer(text="Введите название раздела: ")
 
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Return_to_main_menu"))

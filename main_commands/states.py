@@ -10,7 +10,7 @@ from all_keyboards.keyboards import book_age_rating_kb
 from all_keyboards.inline_keyboards import main_menu_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from utils.database import AdminDatabase
+from utils.database import AdminDatabase, InfoDatabase
 from config import GROUP_ID, main_menu_image_path
 import os
 
@@ -289,3 +289,38 @@ async def process_time(message: Message, state: FSMContext) -> None:
 
         scheduler.start()
     await message.answer(text="Встреча успешно добавлена")
+
+
+class InfoForm(StatesGroup):
+    name = State()
+    description = State()
+
+
+# @router.message(Command("db_add_meet"))
+# async def db_add_meet(message: Message, state: FSMContext) -> None:
+#     '''Добавление в расписание новую встречу'''
+#     if not AdminDatabase.is_admin(message.from_user.id):
+#         await message.answer(text="Отказано в доступе")
+#         return
+#     await state.set_state(MeetingsForm.description)
+#     await message.answer(text="Введите описание встречи: ")
+
+@router.message(InfoForm.name)
+async def process_info_name(message: Message, state: FSMContext) -> None:
+    await state.update_data(name=message.text)
+    await state.set_state(InfoForm.description)
+    await message.answer(text=f"Введите описание раздела: ")
+
+
+@router.message(InfoForm.description)
+async def process_info_description(message: Message, state: FSMContext) -> None:
+    await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
+
+    data = await state.get_data()
+    await state.clear()
+
+    InfoDatabase.renew_table()
+    InfoDatabase.add_info(**data)
+
+    await message.answer(text=f"Успешно")
+

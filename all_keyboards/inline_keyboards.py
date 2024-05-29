@@ -41,23 +41,22 @@ def main_menu_kb(user_id: int):
 
 class InfoView(CallbackData, prefix="pag"):
     action: str
-    description: str = ""
+    name: str
 
 
 def info_view_kb():
     builder = InlineKeyboardBuilder()
     InfoDatabase.renew_table()
     if InfoDatabase.get_info():
-        for key, value in InfoDatabase.get_info().items():
+        for key in InfoDatabase.get_info().keys():
             builder.row(
                 InlineKeyboardButton(
                 text=key.capitalize(),
                 callback_data=InfoView(
                     action="Info_check",
-                    description=value
+                    name=key
                     ).pack()
                 ),
-                width=2
             )
 
     builder.row(
@@ -85,38 +84,59 @@ def back_to_info_kb():
 
 class AdminPanel(CallbackData, prefix="pag"):
     action: str
-    user_id: int
 
 
-def admin_panel_kb(user_id: int):
+def admin_panel_kb():
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
         text="Добавить встречу",
         callback_data=AdminPanel(
-            action="Add_meeting",
-            user_id=user_id
+            action="Add_meeting"
             ).pack()
-        ),
-        width=2
+        )
     )
 
     builder.row(
         InlineKeyboardButton(
         text="Добавить книгу",
         callback_data=AdminPanel(
-            action="Add_book",
-            user_id=user_id
+            action="Add_book"
+            ).pack()
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+        text="Добавить информацию",
+        callback_data=AdminPanel(
+            action="Add_info"
+            ).pack()
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+        text="Изменить информацию",
+        callback_data=AdminPanel(
+            action="Change_info"
             ).pack()
         ),
-        width=2
+
+        InlineKeyboardButton(
+        text="Удалить информацию",
+        callback_data=AdminPanel(
+            action="Remove_info"
+            ).pack()
+        ),
     )
 
     builder.row(
         InlineKeyboardButton(
         text="В главное меню",
         callback_data=MainMenu(action="Return_to_main_menu").pack()
-    ))
+        )
+    )
     return builder.as_markup()
 
 
