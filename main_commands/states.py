@@ -35,7 +35,7 @@ class BooksForm(StatesGroup):
     author = State()
     genre = State()
     year = State()
-    publishing_house = State()
+    film_adaptations = State()
     age_rating = State()
     image = State()
 
@@ -92,13 +92,13 @@ async def process_book_year(message: Message, state: FSMContext) -> None:
     except ValueError:
         await message.answer("Некорректный год\nВведите год по такому формату: 2024 ")
         return
-    await state.set_state(BooksForm.publishing_house)
-    await message.answer(text="Введите издательство книги: ")
+    await state.set_state(BooksForm.film_adaptations)
+    await message.answer(text="Введите фильмовые адаптации книг: ")
 
  
-@router.message(BooksForm.publishing_house)
-async def process_book_publishing_house(message: Message, state: FSMContext) -> None:
-    await state.update_data(publishing_house=message.text)
+@router.message(BooksForm.film_adaptations)
+async def process_book_film_adaptations(message: Message, state: FSMContext) -> None:
+    await state.update_data(film_adaptations=message.text)
     await state.set_state(BooksForm.age_rating)
     await message.answer(
         text="У вас появилась клавиатура.\n"
@@ -153,7 +153,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
 
             full_data = (
                 data["name"], data["description"], data["author"], data["genre"], int(data["year"]), 
-                data["publishing_house"], data["age_rating"], data["image"]
+                data["film_adaptations"], data["age_rating"], data["image"]
                 )
 
             with sqlite3.connect("db.db") as db:
@@ -161,7 +161,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                 cursor.execute("""
                                 INSERT INTO books (
                                 name, description, author, genre, year, 
-                                publishing_house, age_rating, image) 
+                                film_adaptations, age_rating, image) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                                """,
                                full_data
@@ -296,15 +296,6 @@ class AddInfoForm(StatesGroup):
     description = State()
 
 
-# @router.message(Command("db_add_meet"))
-# async def db_add_meet(message: Message, state: FSMContext) -> None:
-#     '''Добавление в расписание новую встречу'''
-#     if not AdminDatabase.is_admin(message.from_user.id):
-#         await message.answer(text="Отказано в доступе")
-#         return
-#     await state.set_state(MeetingsForm.description)
-#     await message.answer(text="Введите описание встречи: ")
-
 @router.message(AddInfoForm.name)
 async def process_info_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
@@ -325,22 +316,48 @@ async def process_info_description(message: Message, state: FSMContext) -> None:
     await message.answer(text=f"Успешно")
 
 
-
-# @router.message(AddInfoForm.name)
-# async def process_info_name(message: Message, state: FSMContext) -> None:
-#     await state.update_data(name=message.text)
-#     await state.set_state(AddInfoForm.description)
-#     await message.answer(text=f"Введите описание раздела: ")
+class ChangeInfoForm(StatesGroup):
+    name = State()
+    description = State()
+    # Да, оно на данный момент аналогично AddInfoForm. Если оно не поменяется, то будет удалено
 
 
-# @router.message(AddInfoForm.description)
-# async def process_info_description(message: Message, state: FSMContext) -> None:
-#     await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
+@router.message(ChangeInfoForm.name)
+async def process_change_info_name(message: Message, state: FSMContext) -> None:
+    if not message.text in InfoDatabase.get_info().keys():
+        await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
+        return
+    await state.update_data(name=message.text)
+    await state.set_state(ChangeInfoForm.description)
+    await message.answer(text=f"Введите новое описание раздела: ")
 
-#     data = await state.get_data()
-#     await state.clear()
 
-#     InfoDatabase.renew_table()
-#     InfoDatabase.add_info(**data)
+@router.message(ChangeInfoForm.description)
+async def process_change_info_description(message: Message, state: FSMContext) -> None:
+    await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
 
-#     await message.answer(text=f"Успешно")
+    data = await state.get_data()
+    await state.clear()
+
+    InfoDatabase.update_info(**data)
+
+    await message.answer(text=f"Успешно")
+
+
+class RemoveInfoForm(StatesGroup):
+    name = State()
+
+
+@router.message(RemoveInfoForm.name)
+async def process_remove_info(message: Message, state: FSMContext) -> None:
+    if not message.text in InfoDatabase.get_info().keys():
+        await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
+        return
+    await state.update_data(name=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    InfoDatabase.remove_info(**data)
+
+    await message.answer(text=f"Успешно")
+    

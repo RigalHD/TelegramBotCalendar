@@ -3,7 +3,7 @@ from aiogram import Router
 from aiogram.types import Message
 import sqlite3
 
-from utils.database import BookDatabase, AdminDatabase
+from utils.database import BookDatabase, AdminDatabase, InfoDatabase
 
 
 router = Router()
@@ -17,8 +17,10 @@ async def db_create(message: Message, command: CommandObject):
         return
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        # cursor.execute("DROP TABLE schedule")
-        
+        # cursor.execute("DROP TABLE books")
+        AdminDatabase.renew_table()
+        BookDatabase.renew_table()
+        InfoDatabase.renew_table()
         cursor.execute("""
                        CREATE TABLE IF NOT EXISTS schedule (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +31,7 @@ async def db_create(message: Message, command: CommandObject):
                        group_id INTEGER
                        )""")
         
-        BookDatabase.create_if_not_exists()
+        
         
         cursor.execute("""
                        CREATE TABLE IF NOT EXISTS users(
@@ -40,3 +42,5 @@ async def db_create(message: Message, command: CommandObject):
                        date_of_subscription DATETIME,
                        date_of_unsubscription DATETIME
                        )""")
+        
+        

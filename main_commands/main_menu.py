@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
 from config import *
 from all_keyboards import inline_keyboards
-from .states import MeetingsForm, BooksForm, AddInfoForm
+from .states import MeetingsForm, BooksForm, AddInfoForm, ChangeInfoForm, RemoveInfoForm
 from aiogram.fsm.context import FSMContext
 from utils.database import AdminDatabase, InfoDatabase
 
@@ -101,6 +101,24 @@ async def add_info_handler(query: CallbackQuery, state: FSMContext):
         return
     await state.set_state(AddInfoForm.name)
     await query.message.answer(text="Введите название раздела: ")
+
+
+@router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Change_info"))
+async def change_info_handler(query: CallbackQuery, state: FSMContext):
+    if not AdminDatabase.is_admin(query.from_user.id):
+        await query.message.answer(text="Отказано в доступе")
+        return
+    await state.set_state(ChangeInfoForm.name)
+    await query.message.answer(text="Введите название раздела для изменения информации: ")
+
+
+@router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Remove_info"))
+async def remove_info_handler(query: CallbackQuery, state: FSMContext):
+    if not AdminDatabase.is_admin(query.from_user.id):
+        await query.message.answer(text="Отказано в доступе")
+        return
+    await state.set_state(RemoveInfoForm.name)
+    await query.message.answer(text="Введите название раздела для удаления информации: ")
 
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Return_to_main_menu"))

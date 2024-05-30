@@ -178,11 +178,11 @@ class BookDatabase(Database):
         self._id: int = id
         self.BOOKS_COLUMNS_RUS_NAMES: tuple = (
             "Название", "Описание", "Автор", "Жанр",
-            "Год", "Издательство", "Рейтинг", "Возраcт"
+            "Год", "Экранизации", "Рейтинг", "Возраcт"
             )
         self.FULL_BOOKS_COLUMNS_RUS_NAMES: tuple = (
             "ID", "Название", "Описание", "Автор", "Жанр",
-            "Год", "Издательство", "Рейтинг", "Возраcт", "Обложка"
+            "Год", "Экранизации", "Рейтинг", "Возраcт", "Обложка"
             )
         
     @staticmethod
@@ -297,7 +297,7 @@ class BookDatabase(Database):
             return None
 
     @staticmethod
-    def create_if_not_exists() -> None:
+    def renew_table() -> None:
         """
         Создает таблицу книг, если таковой не было
         """
@@ -311,7 +311,7 @@ class BookDatabase(Database):
                     author CHAR,
                     genre CHAR,
                     year INTEGER,
-                    publishing_house CHAR,
+                    film_adaptations TEXT,
                     rating REAL,
                     age_rating CHAR,
                     image BLOB DEFAULT NULL
