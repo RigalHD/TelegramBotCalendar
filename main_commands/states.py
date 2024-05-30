@@ -1,6 +1,5 @@
-from aiogram.filters import Command, CommandObject
 from aiogram import Router
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message
 import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
@@ -11,22 +10,10 @@ from all_keyboards.inline_keyboards import main_menu_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
 from utils.database import AdminDatabase, InfoDatabase
-from config import GROUP_ID, main_menu_image_path
+from config import GROUP_ID
 import os
 
 router = Router()
-
-
-@router.message(Command("testf"))
-async def testf(message: Message, command: CommandObject):
-    if not AdminDatabase.is_admin(message.from_user.id):
-        await message.answer(text="Отказано в доступе")
-        return
-    await message.answer_photo(
-        photo=FSInputFile(main_menu_image_path),
-        caption="Тест меню",
-        reply_markup=main_menu_kb(message.from_user.id)
-        )
 
 
 class BooksForm(StatesGroup):

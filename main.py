@@ -8,8 +8,11 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards import keyboards
+from all_keyboards.inline_keyboards import main_menu_kb
 from cfgs import TOKEN
+from config import main_menu_image_path
 from utils import database
+from aiogram.types import Message, FSInputFile
 from main_commands import (
     main_menu,
     states,
@@ -29,10 +32,11 @@ async def send_msg(bot: Bot):
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer(
-        f"Приветствую, <b>{message.from_user.first_name}</b>",
-        reply_markup=keyboards.main_kb(message.from_user.id))
-    await message.answer(f"Ваш айди -> {message.from_user.id}")
+    await message.answer_photo(
+        photo=FSInputFile(main_menu_image_path),
+        caption="Главное меню",
+        reply_markup=main_menu_kb(message.from_user.id)
+        )
 
 
 async def send_reminder(bot: Bot, info_message: str, group_id: int):

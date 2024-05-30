@@ -115,50 +115,60 @@ class AdminPanel(CallbackData, prefix="pag"):
     action: str
 
 
-def admin_panel_kb():
+def admin_panel_kb(user_id: int):
     builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(
-        text="Добавить встречу",
-        callback_data=AdminPanel(
-            action="Add_meeting"
-            ).pack()
+    if AdminDatabase.is_admin(user_id):
+        builder.row(
+            InlineKeyboardButton(
+            text="Добавить встречу",
+            callback_data=AdminPanel(
+                action="Add_meeting"
+                ).pack()
+            )
         )
-    )
 
-    builder.row(
-        InlineKeyboardButton(
-        text="Добавить книгу",
-        callback_data=AdminPanel(
-            action="Add_book"
-            ).pack()
+        builder.row(
+            InlineKeyboardButton(
+            text="Добавить книгу",
+            callback_data=AdminPanel(
+                action="Add_book"
+                ).pack()
+            )
         )
-    )
 
-    builder.row(
-        InlineKeyboardButton(
-        text="Добавить информацию",
-        callback_data=AdminPanel(
-            action="Add_info"
-            ).pack()
+        builder.row(
+            InlineKeyboardButton(
+            text="Добавить информацию",
+            callback_data=AdminPanel(
+                action="Add_info"
+                ).pack()
+            )
         )
-    )
 
-    builder.row(
-        # InlineKeyboardButton(
-        # text="Изменить информацию",
-        # callback_data=AdminPanel(
-        #     action="Change_info"
-        #     ).pack()
-        # ),
+        builder.row(
+            # InlineKeyboardButton(
+            # text="Изменить информацию",
+            # callback_data=AdminPanel(
+            #     action="Change_info"
+            #     ).pack()
+            # ),
 
-        InlineKeyboardButton(
-        text="Удалить информацию",
-        callback_data=AdminPanel(
-            action="Remove_info"
-            ).pack()
-        ),
-    )
+            InlineKeyboardButton(
+            text="Удалить информацию",
+            callback_data=AdminPanel(
+                action="Remove_info"
+                ).pack()
+            ),
+        )
+        if AdminDatabase.get_admin_level(user_id) >= 1:
+            builder.row(
+                InlineKeyboardButton(
+                text="Добавить администратора",
+                callback_data=AdminPanel(
+                    action="Add_admin"
+                    ).pack()
+                )
+            )
 
     builder.row(
         InlineKeyboardButton(

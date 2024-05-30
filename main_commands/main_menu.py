@@ -72,7 +72,7 @@ async def admin_panel_handler(query: CallbackQuery, callback_data: inline_keyboa
     )
     await query.message.edit_caption(
         caption="Админ панель",
-        reply_markup=inline_keyboards.admin_panel_kb()
+        reply_markup=inline_keyboards.admin_panel_kb(query.from_user.id)
     )
 
 

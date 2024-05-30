@@ -104,12 +104,13 @@ class AdminDatabase(Database):
                 CREATE TABLE IF NOT EXISTS admins(
                 id INTEGER PRIMARY KEY,
                 telegram_id INTEGER NOT NULL,
+                admin_level INTEGER,
                 join_date DATETIME
                 )"""
                 )
 
     @staticmethod   
-    def add_admin(admin_id: int) -> None:
+    def add_admin(admin_id: int, admin_level: int = 0) -> None:
         """
         Добавляет админа в таблицу
         :param admin_id: telegram id админа
@@ -117,13 +118,13 @@ class AdminDatabase(Database):
         try:
             with sqlite3.connect("db.db") as db:
                 db.cursor().execute(
-                    "INSERT INTO admins (telegram_id, join_date) VALUES (?, ?)",
-                    (admin_id, datetime.datetime.now())
+                    "INSERT INTO admins (telegram_id, admin_level, join_date) VALUES (?, ?, ?)",
+                    (admin_id, admin_level, datetime.datetime.now())
                 )
         except Exception as e:
             print(e)
             raise e
-
+    
     @staticmethod
     def is_admin(user_tg_id: int) -> bool:
         """
@@ -142,6 +143,25 @@ class AdminDatabase(Database):
             print(e)
             raise e
 
+    @staticmethod
+    def get_admin_level(user_tg_id: int) -> int:
+        """
+        Проверяет является ли пользователь админом.
+        В случае, если пользователь является админом, то возвращает его уровень.
+        Если же пользователь не является админом, то возвращает -1
+        :param user_tg_id: telegram id пользователя
+        """
+        try:
+            if AdminDatabase.is_admin(user_tg_id):
+                with sqlite3.connect("db.db") as db:
+                    return db.cursor().execute(
+                        "SELECT admin_level FROM admins WHERE telegram_id =?",
+                        (user_tg_id,)
+                        ).fetchone()[0]
+            return -1
+        except Exception as e:
+            print(e)
+            raise e
     # @staticmethod
     # def remove_admin(admin_id: int) -> None:
     #     """
