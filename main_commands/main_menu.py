@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram import Router, F
 from config import *
 from all_keyboards import inline_keyboards
-from .states import MeetingsForm, BooksForm, InfoForm
+from .states import MeetingsForm, BooksForm, AddInfoForm
 from aiogram.fsm.context import FSMContext
 from utils.database import AdminDatabase, InfoDatabase
 
@@ -45,9 +45,9 @@ async def info_view_handler(query: CallbackQuery, callback_data: inline_keyboard
 @router.callback_query(inline_keyboards.InfoView.filter(F.action == "Info_check"))
 async def info_check_handler(query: CallbackQuery, callback_data: inline_keyboards.InfoView):
     await query.message.edit_caption(
-        caption=str(InfoDatabase.get_info()[callback_data.name]), # ! !!!!!!!
+        caption=InfoDatabase.get_info()[callback_data.name],
         reply_markup=inline_keyboards.back_to_info_kb(),
-        parse_mode=None 
+        parse_mode="Markdown"
     )
 
 
@@ -99,7 +99,7 @@ async def add_info_handler(query: CallbackQuery, state: FSMContext):
     if not AdminDatabase.is_admin(query.from_user.id):
         await query.message.answer(text="Отказано в доступе")
         return
-    await state.set_state(InfoForm.name)
+    await state.set_state(AddInfoForm.name)
     await query.message.answer(text="Введите название раздела: ")
 
 

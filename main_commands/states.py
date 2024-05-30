@@ -291,7 +291,7 @@ async def process_time(message: Message, state: FSMContext) -> None:
     await message.answer(text="Встреча успешно добавлена")
 
 
-class InfoForm(StatesGroup):
+class AddInfoForm(StatesGroup):
     name = State()
     description = State()
 
@@ -305,14 +305,14 @@ class InfoForm(StatesGroup):
 #     await state.set_state(MeetingsForm.description)
 #     await message.answer(text="Введите описание встречи: ")
 
-@router.message(InfoForm.name)
+@router.message(AddInfoForm.name)
 async def process_info_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
-    await state.set_state(InfoForm.description)
+    await state.set_state(AddInfoForm.description)
     await message.answer(text=f"Введите описание раздела: ")
 
 
-@router.message(InfoForm.description)
+@router.message(AddInfoForm.description)
 async def process_info_description(message: Message, state: FSMContext) -> None:
     await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
 
@@ -324,3 +324,23 @@ async def process_info_description(message: Message, state: FSMContext) -> None:
 
     await message.answer(text=f"Успешно")
 
+
+
+# @router.message(AddInfoForm.name)
+# async def process_info_name(message: Message, state: FSMContext) -> None:
+#     await state.update_data(name=message.text)
+#     await state.set_state(AddInfoForm.description)
+#     await message.answer(text=f"Введите описание раздела: ")
+
+
+# @router.message(AddInfoForm.description)
+# async def process_info_description(message: Message, state: FSMContext) -> None:
+#     await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
+
+#     data = await state.get_data()
+#     await state.clear()
+
+#     InfoDatabase.renew_table()
+#     InfoDatabase.add_info(**data)
+
+#     await message.answer(text=f"Успешно")

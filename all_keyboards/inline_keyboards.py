@@ -19,14 +19,12 @@ def main_menu_kb(user_id: int):
         text="Информация",
         callback_data=MainMenu(action="Info_view").pack()
         ),
-        width=2
     )
     builder.row(
         InlineKeyboardButton(
         text="Посмотреть книги",
         callback_data=MainMenu(action="Books_view").pack()
         ),
-        width=2
     )
     if AdminDatabase.is_admin(user_id):
         builder.row(
@@ -34,14 +32,13 @@ def main_menu_kb(user_id: int):
             text="Админ панель",
             callback_data=MainMenu(action="Admin_panel_view", user_id=user_id).pack(),
             ),
-            width=2
         )
     return builder.as_markup()
 
 
 class InfoView(CallbackData, prefix="pag"):
     action: str
-    name: str
+    name: str = ""
 
 
 def info_view_kb():
@@ -54,7 +51,7 @@ def info_view_kb():
                 text=key.capitalize(),
                 callback_data=InfoView(
                     action="Info_check",
-                    name=key
+                    name=str(key)
                     ).pack()
                 ),
             )
@@ -71,13 +68,12 @@ def back_to_info_kb():
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-        text="Назад",
+        text="Вернуться к просмотру информации",
         callback_data=InfoView(
             action="Return_to_info_view",
-            description="-"
+            name="-"
             ).pack()
-        ),
-        width=2
+        )
     )
     return builder.as_markup()
 
