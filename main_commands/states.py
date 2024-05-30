@@ -322,14 +322,14 @@ class ChangeInfoForm(StatesGroup):
     # Да, оно на данный момент аналогично AddInfoForm. Если оно не поменяется, то будет удалено
 
 
-@router.message(ChangeInfoForm.name)
-async def process_change_info_name(message: Message, state: FSMContext) -> None:
-    if not message.text in InfoDatabase.get_info().keys():
-        await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
-        return
-    await state.update_data(name=message.text)
-    await state.set_state(ChangeInfoForm.description)
-    await message.answer(text=f"Введите новое описание раздела: ")
+# @router.message(ChangeInfoForm.name)
+# async def process_change_info_name(message: Message, state: FSMContext) -> None:
+#     if not message.text in InfoDatabase.get_info().keys():
+#         await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
+#         return
+#     await state.update_data(name=message.text)
+#     await state.set_state(ChangeInfoForm.description)
+#     await message.answer(text=f"Введите новое описание раздела: ")
 
 
 @router.message(ChangeInfoForm.description)

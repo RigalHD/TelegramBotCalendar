@@ -46,7 +46,7 @@ async def info_view_handler(query: CallbackQuery, callback_data: inline_keyboard
 async def info_check_handler(query: CallbackQuery, callback_data: inline_keyboards.InfoView):
     await query.message.edit_caption(
         caption=InfoDatabase.get_info()[callback_data.name],
-        reply_markup=inline_keyboards.back_to_info_kb(),
+        reply_markup=inline_keyboards.back_to_info_kb(callback_data.name, query.from_user.id),
         parse_mode="Markdown"
     )
 
@@ -103,13 +103,14 @@ async def add_info_handler(query: CallbackQuery, state: FSMContext):
     await query.message.answer(text="Введите название раздела: ")
 
 
-@router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Change_info"))
-async def change_info_handler(query: CallbackQuery, state: FSMContext):
+@router.callback_query(inline_keyboards.InfoView.filter(F.action == "Change_info"))
+async def change_info_handler(query: CallbackQuery, state: FSMContext, callback_data: inline_keyboards.InfoView):
     if not AdminDatabase.is_admin(query.from_user.id):
         await query.message.answer(text="Отказано в доступе")
         return
-    await state.set_state(ChangeInfoForm.name)
-    await query.message.answer(text="Введите название раздела для изменения информации: ")
+    await state.update_data(name=callback_data.name)
+    await state.set_state(ChangeInfoForm.description)
+    await query.message.answer(text="Введите описание раздела: ")
 
 
 @router.callback_query(inline_keyboards.AdminPanel.filter(F.action == "Remove_info"))

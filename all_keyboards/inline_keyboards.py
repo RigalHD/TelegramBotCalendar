@@ -64,8 +64,41 @@ def info_view_kb():
     return builder.as_markup()
 
 
-def back_to_info_kb():
+# def admin_info_view_kb():
+#     builder = InlineKeyboardBuilder()
+#     InfoDatabase.renew_table()
+#     if InfoDatabase.get_info():
+#         for key in InfoDatabase.get_info().keys():
+#             builder.row(
+#                 InlineKeyboardButton(
+#                 text=key.capitalize(),
+#                 callback_data=InfoView(
+#                     action="Info_check",
+#                     name=str(key)
+#                     ).pack()
+#                 ),
+#             )
+
+#     builder.row(
+#         InlineKeyboardButton(
+#         text="В главное меню",
+#         callback_data=MainMenu(action="Return_to_main_menu").pack()
+#     ))
+#     return builder.as_markup()
+
+
+def back_to_info_kb(name: str, user_id: int):
     builder = InlineKeyboardBuilder()
+    if AdminDatabase.is_admin(user_id):
+        builder.row(
+            InlineKeyboardButton(
+            text="Изменить раздел",
+            callback_data=InfoView(
+                action="Change_info",
+                name=name
+                ).pack()
+            )
+        )
     builder.row(
         InlineKeyboardButton(
         text="Вернуться к просмотру информации",
@@ -112,12 +145,12 @@ def admin_panel_kb():
     )
 
     builder.row(
-        InlineKeyboardButton(
-        text="Изменить информацию",
-        callback_data=AdminPanel(
-            action="Change_info"
-            ).pack()
-        ),
+        # InlineKeyboardButton(
+        # text="Изменить информацию",
+        # callback_data=AdminPanel(
+        #     action="Change_info"
+        #     ).pack()
+        # ),
 
         InlineKeyboardButton(
         text="Удалить информацию",
