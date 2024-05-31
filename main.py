@@ -97,7 +97,6 @@ async def sender_of_reminds(bot: Bot):
 
 async def main():
     dp.include_routers(
-        user_commands.router,
         states.router,
         db_creating_commands.router,
         main_menu.router,
