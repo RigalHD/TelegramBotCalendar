@@ -6,10 +6,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
-from all_keyboards.inline_keyboards import main_menu_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from utils.database import AdminDatabase, InfoDatabase
+from utils.database import InfoDatabase, SchedulerDatabase
 from config import GROUP_ID
 import os
 
@@ -232,50 +231,10 @@ async def process_time(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
 
     await state.clear()
-
-    full_data = list(data.values())
-    full_data.append(GROUP_ID)
-    full_data[2] = data["time"] + ":00"
-    group_id = full_data[-1]
-    full_data[-1] = 0
-    full_data.append(group_id)
-    
-    await message.answer(text=str(data), parse_mode=None)
-
-    hour, minute = [int(i) for i in data["time"].split(":")]
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        cursor.execute("""
-                       INSERT INTO schedule (
-                       description,
-                       day, 
-                       time, 
-                       expired,
-                       group_id
-                       ) VALUES (?, ?, ?, ?, ?)""",
-                       full_data
-                       )
-        
-        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
-        Что на ней будет? - <b>{data["description"]}</b>
-        Когда она будет? - <b>{hour}:{minute}</b>
-        Во сколько приходить? - <b>{data["time"]}</b> """
-
-        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-        scheduler.add_job(
-            send_reminder, 'cron',
-            hour=int(hour),
-            minute=int(minute), 
-            start_date=datetime.datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-            kwargs={
-                "bot": bot,
-                "info_message": info_message,
-                "group_id": group_id
-                },
-        )
-
-        scheduler.start()
-    await message.answer(text="Встреча успешно добавлена")
+    if SchedulerDatabase.add_meeting(tuple(data.values()), send_reminder):
+        await message.answer(text="Встреча успешно добавлена")
+    else:
+        await message.answer(text="Возникла ошибка")
 
 
 class AddInfoForm(StatesGroup):

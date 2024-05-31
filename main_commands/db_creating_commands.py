@@ -12,10 +12,10 @@ router = Router()
 @router.message(Command("db_create"))
 async def db_create(message: Message, command: CommandObject):
     '''Создает базу данных'''
-    if AdminDatabase.get_admin_level(message.from_user.id) >= 1:
+    if AdminDatabase.is_admin(message.from_user.id):
         with sqlite3.connect("db.db") as db:
             cursor = db.cursor()
-            # cursor.execute("DROP TABLE admins")
+            # cursor.execute("DROP TABLE schedule")
             AdminDatabase.renew_table()
             BookDatabase.renew_table()
             InfoDatabase.renew_table()

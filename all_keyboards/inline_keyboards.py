@@ -64,29 +64,6 @@ def info_view_kb():
     return builder.as_markup()
 
 
-# def admin_info_view_kb():
-#     builder = InlineKeyboardBuilder()
-#     InfoDatabase.renew_table()
-#     if InfoDatabase.get_info():
-#         for key in InfoDatabase.get_info().keys():
-#             builder.row(
-#                 InlineKeyboardButton(
-#                 text=key.capitalize(),
-#                 callback_data=InfoView(
-#                     action="Info_check",
-#                     name=str(key)
-#                     ).pack()
-#                 ),
-#             )
-
-#     builder.row(
-#         InlineKeyboardButton(
-#         text="В главное меню",
-#         callback_data=MainMenu(action="Return_to_main_menu").pack()
-#     ))
-#     return builder.as_markup()
-
-
 def back_to_info_kb(name: str, user_id: int):
     builder = InlineKeyboardBuilder()
     if AdminDatabase.is_admin(user_id):
@@ -160,15 +137,7 @@ def admin_panel_kb(user_id: int):
                 ).pack()
             ),
         )
-        if AdminDatabase.get_admin_level(user_id) >= 1:
-            builder.row(
-                InlineKeyboardButton(
-                text="Добавить администратора",
-                callback_data=AdminPanel(
-                    action="Add_admin"
-                    ).pack()
-                )
-            )
+
 
     builder.row(
         InlineKeyboardButton(
@@ -186,23 +155,26 @@ class BookList(CallbackData, prefix="pag"):
 
 
 def all_books_kb():
-    books_dict = BookDatabase.get_amount_of_books(5)
+    books_dict = BookDatabase.get_all_books()
     builder = InlineKeyboardBuilder()
-    for book_id in books_dict.keys():
-        try:
+    if books_dict:
+        for book_id in books_dict.keys():
             builder.row(
                 InlineKeyboardButton(
-                text=books_dict[book_id]["name"],
-                callback_data=BookList(action="book_check", book_id=book_id).pack()
-                ))
-        except KeyError:
-            print(books_dict)
+                    text=books_dict[book_id]["name"],
+                    callback_data=BookList(
+                        action="book_check",
+                        book_id=book_id
+                    ).pack()
+                )
+            )
 
     builder.row(
         InlineKeyboardButton(
-        text="В главное меню",
-        callback_data=MainMenu(action="Return_to_main_menu").pack()
-    ))
+            text="В главное меню",
+            callback_data=MainMenu(action="Return_to_main_menu").pack()
+        )
+    )
     
     return builder.as_markup()
 
@@ -218,21 +190,26 @@ def book_info_kb(book_id: int):
         text="Описание книги",
         callback_data=BookInfo(
             action="book_description_check",
-            book_id=book_id).pack()
+            book_id=book_id
+            ).pack()
             )
         )
+    
     builder.row(InlineKeyboardButton(
         text="Дополнительная информация о книге",
         callback_data=BookInfo(
             action="book_additional_info_check",
-            book_id=book_id).pack()
+            book_id=book_id
+            ).pack()
             )
         )
 
-    builder.row(InlineKeyboardButton(
-        text="Назад",
-        callback_data=BookInfo(action="return_back", book_id=book_id).pack())
+    builder.row(
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=BookInfo(action="return_back", book_id=book_id).pack()
         )
+    )
     return builder.as_markup()
 
 

@@ -1,9 +1,10 @@
 from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from abc import ABC, abstractmethod
+from config import GROUP_ID
 import sqlite3
 import datetime
-from typing import Dict
 
 
 class Database:
@@ -82,7 +83,7 @@ class InfoDatabase(Database):
                 )
 
     @staticmethod
-    def get_info() -> Dict[str, str]:
+    def get_info() -> dict[str, str]:
         with sqlite3.connect("db.db") as db:
             cursor = db.cursor()
             result = cursor.execute(
@@ -191,6 +192,124 @@ class AdminDatabase(Database):
                 )
             except Exception as e:
                 print(e)
+
+
+class SchedulerDatabase(Database):
+    def __init__(self, id: int, date_time: datetime.datetime):
+        self._id: int = id
+        self._date_time: datetime.datetime = date_time
+        self._expired: bool = False
+
+    @staticmethod
+    def add_meeting(
+        data: list | tuple,
+        reminder_function,
+        ) -> True | False:
+        """
+        Добавляет новую встречу в таблицу расписаний.
+        Возвращает True, если встреча была успешно добавлена,
+        иначе - False.
+
+        :param data: данные о встрече
+        :param reminder_function: функция, отправляющая напоминание
+        """
+        try:
+            data = list(data)
+            data.append(0)
+            data.append(GROUP_ID)
+            data[2] += ":00"
+
+            with sqlite3.connect("db.db") as db:
+                cursor = db.cursor()
+                meeting_id = cursor.execute("""
+                            INSERT INTO schedule (
+                            description,
+                            day, 
+                            time, 
+                            expired,
+                            group_id
+                            ) VALUES (?, ?, ?, ?, ?) 
+                            RETURNING id
+                            """,
+                            data
+                ).fetchone()[0]
+
+                SchedulerDatabase.add_job(
+                    data=data,
+                    id=id,
+                    reminder_function=reminder_function
+                )
+
+                return True
+            
+        except Exception as e:
+            print(e)
+            return False
+
+    @staticmethod
+    def add_job(
+        data: tuple | list,
+        id: int,
+        reminder_function
+        ) -> None:
+        """
+        Добавляет "работу" через библиотеку apscheduler
+        :param data: данные о встрече
+        :param id: id встречи в таблице
+        :param reminder_function: функция, отправляющая напоминание
+        :param scheduler: туда можно передать свой scheduler, чтобы
+        """
+        hour, minute = data[2].split(":")
+        new_job_id = "scheduler_job_" + str(id)
+                
+        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
+        Что на ней будет? - <b>{data[0]}</b>
+        Когда она будет? - <b>{hour}:{minute}</b>
+        Во сколько приходить? - <b>{data[1]}</b> """
+
+        day, month, year = data[1].replace(",", ".").split(".")
+        date = datetime.datetime.strptime(f'{year}-{month}-{day}', "%Y-%m-%d") + datetime.timedelta(days=1)
+        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+        scheduler.add_job(
+            reminder_function,
+            'cron',
+            hour=12,
+            minute=00,
+            day_of_week="sat",
+            start_date=datetime.datetime.now(),
+            end_date=date,
+            kwargs={
+                "info_message": info_message,
+                "group_id": GROUP_ID
+            },
+            id=new_job_id
+        )
+
+        scheduler.start()
+
+    def make_expired_if_expired(self) -> None:
+        """
+        Устанавливает статус встречи как просроченную,
+        если она является таковой
+        """
+        if datetime.datetime.now() > self._date_time:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    "UPDATE schedule SET expired = 1 WHERE id = ?",
+                    (self._id,)
+                )
+            self._expired = True
+
+
+    def is_expired(self) -> True | False:
+        self.make_expired_if_expired()
+        if self._expired == True:
+            return True
+        return False
+
+    @property
+    def id(self) -> int:
+        return self._id
 
 
 class BookDatabase(Database):
@@ -374,8 +493,8 @@ class BookDatabase(Database):
         :param has_description: True - итог без изменений, False - описание книги не будет в итоговом словаре
         :param has_image: True - итог без изменений, False - обложка книги не будет в итоговом словаре
         :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке
-
         """
+        
         try:
             with sqlite3.connect("db.db") as db:
                 cursor = db.cursor()
