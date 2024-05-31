@@ -1,9 +1,11 @@
 from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from abc import ABC, abstractmethod
+from config import GROUP_ID
 import sqlite3
 import datetime
-from typing import Dict
+
 
 class Database:
     def __init__(self):
@@ -42,7 +44,7 @@ class InfoDatabase(Database):
                 description TEXT NOT NULL,
                 last_changed DATETIME NOT NULL
                 )"""
-                )
+            )
 
     @staticmethod
     def add_info(name: str, description: str) -> None:
@@ -67,9 +69,21 @@ class InfoDatabase(Database):
                 """,
                 (description, datetime.datetime.now(), name)
                 )
+            
+    @staticmethod
+    def remove_info(name: str) -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """
+                DELETE FROM info
+                WHERE name = ?
+                """,
+                (name,)
+                )
 
     @staticmethod
-    def get_info() -> Dict[str, str]:
+    def get_info() -> dict[str, str]:
         with sqlite3.connect("db.db") as db:
             cursor = db.cursor()
             result = cursor.execute(
@@ -91,12 +105,13 @@ class AdminDatabase(Database):
                 CREATE TABLE IF NOT EXISTS admins(
                 id INTEGER PRIMARY KEY,
                 telegram_id INTEGER NOT NULL,
+                admin_level INTEGER,
                 join_date DATETIME
                 )"""
                 )
 
     @staticmethod   
-    def add_admin(admin_id: int) -> None:
+    def add_admin(admin_id: int, admin_level: int = 0) -> None:
         """
         Добавляет админа в таблицу
         :param admin_id: telegram id админа
@@ -104,13 +119,13 @@ class AdminDatabase(Database):
         try:
             with sqlite3.connect("db.db") as db:
                 db.cursor().execute(
-                    "INSERT INTO admins (telegram_id, join_date) VALUES (?, ?)",
-                    (admin_id, datetime.datetime.now())
+                    "INSERT INTO admins (telegram_id, admin_level, join_date) VALUES (?, ?, ?)",
+                    (admin_id, admin_level, datetime.datetime.now())
                 )
         except Exception as e:
             print(e)
             raise e
-
+    
     @staticmethod
     def is_admin(user_tg_id: int) -> bool:
         """
@@ -129,21 +144,26 @@ class AdminDatabase(Database):
             print(e)
             raise e
 
-    # @staticmethod
-    # def remove_admin(admin_id: int) -> None:
-    #     """
-    #     Удаляет админа из таблицы по внутреннему айди таблицы
-    #     :param admin_id: telegram id админа
-    #     """
-    #     with sqlite3.connect("db.db") as db:
-    #         try:
-    #             db.cursor().execute(
-    #                 "DELETE FROM admins WHERE id = ?",
-    #                 admin_id
-    #             )
-    #         except Exception as e:
-    #             print(e)
-
+    @staticmethod
+    def get_admin_level(user_tg_id: int) -> int:
+        """
+        Проверяет является ли пользователь админом.
+        В случае, если пользователь является админом, то возвращает его уровень.
+        Если же пользователь не является админом, то возвращает -1
+        :param user_tg_id: telegram id пользователя
+        """
+        try:
+            if AdminDatabase.is_admin(user_tg_id):
+                with sqlite3.connect("db.db") as db:
+                    return db.cursor().execute(
+                        "SELECT admin_level FROM admins WHERE telegram_id =?",
+                        (user_tg_id,)
+                        ).fetchone()[0]
+            return -1
+        except Exception as e:
+            print(e)
+            raise e
+        
     @staticmethod
     def remove_admin(admin_tg_id: int) -> None:
         """
@@ -160,17 +180,146 @@ class AdminDatabase(Database):
                 print(e)
 
 
+class SchedulerDatabase(Database):
+    def __init__(self, id: int, date_time: datetime.datetime):
+        self._id: int = id
+        self._date_time: datetime.datetime = date_time
+        self._expired: bool = False
+
+    @staticmethod
+    def add_meeting(
+        data: list | tuple,
+        reminder_function,
+        ) -> True | False:
+        """
+        Добавляет новую встречу в таблицу расписаний.
+        Возвращает True, если встреча была успешно добавлена,
+        иначе - False.
+
+        :param data: данные о встрече
+        :param reminder_function: функция, отправляющая напоминание
+        """
+        try:
+            data = list(data)
+            data.append(0)
+            data.append(GROUP_ID)
+            data[2] += ":00"
+
+            with sqlite3.connect("db.db") as db:
+                cursor = db.cursor()
+                meeting_id = cursor.execute("""
+                            INSERT INTO schedule (
+                            description,
+                            day, 
+                            time, 
+                            expired,
+                            group_id
+                            ) VALUES (?, ?, ?, ?, ?) 
+                            RETURNING id
+                            """,
+                            data
+                ).fetchone()[0]
+
+                SchedulerDatabase.add_job(
+                    data=data,
+                    id=meeting_id,
+                    reminder_function=reminder_function
+                )
+                return True
+            
+        except Exception as e:
+            print(e)
+            return False
+
+    @staticmethod
+    def add_job(
+        data: tuple | list,
+        id: int,
+        reminder_function
+        ) -> None:
+        """
+        Добавляет "работу" через библиотеку apscheduler
+        :param data: данные о встрече
+        :param id: id встречи в таблице
+        :param reminder_function: функция, отправляющая напоминание
+        """
+        hour, minute = data[2].split(":")
+        new_job_id = "scheduler_job_" + str(id)
+                
+        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
+        Что на ней будет? - <b>{data[0]}</b>
+        Когда она будет? - <b>{hour}:{minute}</b>
+        Во сколько приходить? - <b>{data[1]}</b> """
+
+        day, month, year = data[1].replace(",", ".").split(".")
+        date = datetime.datetime.strptime(f'{year}-{month}-{day}', "%Y-%m-%d") + datetime.timedelta(days=1)
+        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+        scheduler.add_job(
+            reminder_function,
+            'cron',
+            hour=12,
+            minute=00,
+            day_of_week="sat",
+            start_date=datetime.datetime.now(),
+            end_date=date,
+            kwargs={
+                "info_message": info_message,
+                "group_id": GROUP_ID
+            },
+            id=new_job_id
+        )
+
+        scheduler.start()
+
+    def make_expired_if_expired(self) -> None:
+        """
+        Устанавливает статус встречи как просроченную,
+        если она является таковой
+        """
+        if datetime.datetime.now() > self._date_time:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    "UPDATE schedule SET expired = 1 WHERE id = ?",
+                    (self._id,)
+                )
+            self._expired = True
+
+
+    def is_expired(self) -> True | False:
+        self.make_expired_if_expired()
+        if self._expired == True:
+            return True
+        return False
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+
 class BookDatabase(Database):
     def __init__(self, id: int):
         self._id: int = id
         self.BOOKS_COLUMNS_RUS_NAMES: tuple = (
             "Название", "Описание", "Автор", "Жанр",
-            "Год", "Издательство", "Рейтинг", "Возраcт"
+            "Год", "Экранизации", "Рейтинг", "Возраcт"
             )
         self.FULL_BOOKS_COLUMNS_RUS_NAMES: tuple = (
             "ID", "Название", "Описание", "Автор", "Жанр",
-            "Год", "Издательство", "Рейтинг", "Возраcт", "Обложка"
+            "Год", "Экранизации", "Рейтинг", "Возраcт", "Обложка"
             )
+        
+    @staticmethod
+    def remove_book_by_id(id: int) -> None:
+        """
+        Удаляет книгу по ее айди
+        :param id: id книги в таблице
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute("DELETE FROM books WHERE id = ?", (id,))
+        except Exception as e:
+            print(e)
+
     
     @staticmethod
     def get_colunms_names(full: bool = False) -> list | None:
@@ -271,7 +420,7 @@ class BookDatabase(Database):
             return None
 
     @staticmethod
-    def create_if_not_exists() -> None:
+    def renew_table() -> None:
         """
         Создает таблицу книг, если таковой не было
         """
@@ -285,7 +434,7 @@ class BookDatabase(Database):
                     author CHAR,
                     genre CHAR,
                     year INTEGER,
-                    publishing_house CHAR,
+                    film_adaptations TEXT,
                     rating REAL,
                     age_rating CHAR,
                     image BLOB DEFAULT NULL
@@ -328,8 +477,8 @@ class BookDatabase(Database):
         :param has_description: True - итог без изменений, False - описание книги не будет в итоговом словаре
         :param has_image: True - итог без изменений, False - обложка книги не будет в итоговом словаре
         :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке
-
         """
+        
         try:
             with sqlite3.connect("db.db") as db:
                 cursor = db.cursor()
@@ -414,6 +563,7 @@ class BookDatabase(Database):
         
         except Exception as e:
             print(e)
+
             return None
     
     @property

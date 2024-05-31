@@ -1,4 +1,3 @@
-from aiogram.filters import Command
 from aiogram import Router
 from aiogram.types import Message
 import sqlite3
@@ -9,7 +8,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from utils.database import AdminDatabase
+from utils.database import InfoDatabase, SchedulerDatabase
+from config import GROUP_ID
+import os
 
 router = Router()
 
@@ -20,47 +21,54 @@ class BooksForm(StatesGroup):
     author = State()
     genre = State()
     year = State()
-    publishing_house = State()
+    film_adaptations = State()
     age_rating = State()
     image = State()
 
 
-@router.message(Command("add_book"))
-async def db_add_book(message: Message, state: FSMContext) -> None:
-    '''Добавление книги в базу данных'''
-    if not AdminDatabase.is_admin(message.from_user.id):
-        await message.answer(text="Отказано в доступе")
-        return
-    await state.set_state(BooksForm.name)
-    await message.answer(text="Введите название книги: ")
+# @router.message(Command("add_book"))
+# async def db_add_book(message: Message, state: FSMContext) -> None:
+#     '''Добавление книги в базу данных'''
+#     if not AdminDatabase.is_admin(message.from_user.id):
+#         await message.answer(text="Отказано в доступе")
+#         return
+#     await state.set_state(BooksForm.name)
+#     await message.answer(text="Введите название книги: ")
 
 
 @router.message(BooksForm.name)
 async def process_book_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
     await state.set_state(BooksForm.description)
-    await message.answer(text="ок. теперь введите описание: ")
+    await message.answer(text="Введите описание книги: ")
 
 
 @router.message(BooksForm.description)
 async def process_book_description(message: Message, state: FSMContext) -> None:
+    if len(message.text) > 1024:
+        await message.answer(
+            text="Описание книги слишком длинное.\n"
+            "Описание должно быть меньше или равно 1024 символам.\n"
+            "Введите другое описание книги:"
+            )
+        return
     await state.update_data(description=message.text)
     await state.set_state(BooksForm.author)
-    await message.answer(text="ок. теперь введите автора: ")
+    await message.answer(text="Введите автора книги: : ")
 
 
 @router.message(BooksForm.author)
 async def process_book_author(message: Message, state: FSMContext) -> None:
     await state.update_data(author=message.text)
     await state.set_state(BooksForm.genre)
-    await message.answer(text="ок. теперь введите жанр: ")
+    await message.answer(text="Введите жанр книги: ")
 
 
 @router.message(BooksForm.genre)
 async def process_book_genre(message: Message, state: FSMContext) -> None:
     await state.update_data(genre=message.text)
     await state.set_state(BooksForm.year)
-    await message.answer(text="ок. теперь введите год: ")
+    await message.answer(text="Введите год, когда книга была выпущена (Пример: 2024): ")
     
 
 @router.message(BooksForm.year)
@@ -68,18 +76,21 @@ async def process_book_year(message: Message, state: FSMContext) -> None:
     try:
         await state.update_data(year=int(message.text))
     except ValueError:
-        await message.answer("Некорректный год")
+        await message.answer("Некорректный год\nВведите год по такому формату: 2024 ")
         return
-    await state.set_state(BooksForm.publishing_house)
-    await message.answer(text="ок. теперь введите издательство: ")
+    await state.set_state(BooksForm.film_adaptations)
+    await message.answer(text="Введите фильмовые адаптации книг: ")
 
  
-@router.message(BooksForm.publishing_house)
-async def process_book_publishing_house(message: Message, state: FSMContext) -> None:
-    await state.update_data(publishing_house=message.text)
+@router.message(BooksForm.film_adaptations)
+async def process_book_film_adaptations(message: Message, state: FSMContext) -> None:
+    await state.update_data(film_adaptations=message.text)
     await state.set_state(BooksForm.age_rating)
     await message.answer(
-        text="ок. теперь выберите возрастной рейтинг картинки ",
+        text="У вас появилась клавиатура.\n"
+        "Выберите в ней возрастной рейтинг.\n"
+        "Если по каким-либо причинам Вы не можете воспользоваться клавиатурой, "
+        "то отправьте возрастной рейтинг, выбрав его отсюда: <b>7-10, 10-14, 14-18</b>",
         reply_markup=book_age_rating_kb()
         )
     
@@ -102,7 +113,10 @@ async def process_book_age_rating(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(age_rating=message.text)
     await state.set_state(BooksForm.image)
-    await message.answer(text="ок. теперь загрузите сюда картинку с обложкой книги: ", reply_markup=ReplyKeyboardRemove())
+    await message.answer(text=
+                         "Теперь отправьте боту файл с обложкой книги или просто загрузите фото: ", 
+                         reply_markup=ReplyKeyboardRemove()
+                         )
     
 
 @router.message(BooksForm.image)
@@ -112,12 +126,12 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
         downloaded_file = await bot.download_file(file_info.file_path)
 
         try:
+            if not os.path.isdir("bot_images/"):
+                os.makedirs("bot_images/")
             src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file.getvalue())
 
-            with open(src, 'rb') as new_file:
-                await state.update_data(image=new_file.read())
             await state.update_data(image=src)
             
             data = await state.get_data()
@@ -125,7 +139,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
 
             full_data = (
                 data["name"], data["description"], data["author"], data["genre"], int(data["year"]), 
-                data["publishing_house"], data["age_rating"], data["image"]
+                data["film_adaptations"], data["age_rating"], data["image"]
                 )
 
             with sqlite3.connect("db.db") as db:
@@ -133,7 +147,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
                 cursor.execute("""
                                 INSERT INTO books (
                                 name, description, author, genre, year, 
-                                publishing_house, age_rating, image) 
+                                film_adaptations, age_rating, image) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                                """,
                                full_data
@@ -151,63 +165,31 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
             return
 
 
-@router.message(Command("Подписаться_на_рассылку"))
-async def db_subscribe_to_the_newsletter(message: Message):
-    '''
-    Эта команда позволяет подписаться
-    на рассылку встреч книжного клуба
-    '''
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        user_data = (
-            message.from_user.id,
-            message.from_user.username,
-            1,
-            datetime.datetime.now()
-            )
-        all_users_ids = cursor.execute("SELECT tg_id FROM users").fetchall()
-        if all_users_ids:
-            for id in all_users_ids:
-                if not message.from_user.id in id:
-                    cursor.execute("""INSERT INTO users (
-                    tg_id,
-                    username, 
-                    is_subscribed, 
-                    date_of_subscription
-                    ) VALUES (?, ?, ?, ?)""",
-                    user_data 
-                    )
-                    await message.answer(text="Вы успешно подписались на рассылку")
-                    return
-        await message.answer(text="Вы уже подписаны на рассылку")
-    
-
-class Form(StatesGroup):
+class MeetingsForm(StatesGroup):
     description = State()
     day = State()
     time = State()
-    group_id = State() # временное решение
 
 
-@router.message(Command("db_add_meet"))
-async def db_add_meet(message: Message, state: FSMContext) -> None:
-    '''Добавление в расписание новую встречу'''
-    if not AdminDatabase.is_admin(message.from_user.id):
-        await message.answer(text="Отказано в доступе")
-        return
-    await state.set_state(Form.description)
-    await message.answer(text="Введите описание встречи: ")
+# @router.message(Command("db_add_meet"))
+# async def db_add_meet(message: Message, state: FSMContext) -> None:
+#     '''Добавление в расписание новую встречу'''
+#     if not AdminDatabase.is_admin(message.from_user.id):
+#         await message.answer(text="Отказано в доступе")
+#         return
+#     await state.set_state(MeetingsForm.description)
+#     await message.answer(text="Введите описание встречи: ")
 
 
-@router.message(Form.description)
+@router.message(MeetingsForm.description)
 async def process_description(message: Message, state: FSMContext) -> None:
     await state.update_data(description=message.text)
-    await state.set_state(Form.day)
+    await state.set_state(MeetingsForm.day)
     now = datetime.datetime.today().date().strftime("%d.%m.%Y")
     await message.answer(text=f"Введите дату встречи по примеру <b>{now}</b>: ")
 
 
-@router.message(Form.day)
+@router.message(MeetingsForm.day)
 async def process_day(message: Message, state: FSMContext) -> None:
     try:
         data = [int(el) for el in message.text.replace("-", ".").replace(",", ".").split(".")]
@@ -222,11 +204,11 @@ async def process_day(message: Message, state: FSMContext) -> None:
         await message.answer(text="Неверный формат даты")
         return
     await state.update_data(day=message.text)
-    await state.set_state(Form.time)
+    await state.set_state(MeetingsForm.time)
     await message.answer(text="Введите время встречи по примеру <b>12:01</b>: ")
     
 
-@router.message(Form.time)
+@router.message(MeetingsForm.time)
 async def process_time(message: Message, state: FSMContext) -> None:
     try:
         time = [int(el) for el in message.text.replace(".", ":").split(":")]
@@ -244,64 +226,84 @@ async def process_time(message: Message, state: FSMContext) -> None:
         await message.answer(text="Неверный формат времени")
         return
     await state.update_data(time=message.text)
-    await state.set_state(Form.group_id)
-    await message.answer(text="ВРЕМЕННО!!! Введите ID группы: ")
 
 
-@router.message(Form.group_id)
-async def process_group_id(message: Message, state: FSMContext) -> None:
-    try:
-        int(message.text)
-    except ValueError:
-        await message.answer(text="Неверный формат ID группы")
-        return
-    await state.update_data(group_id=message.text)
+    data = await state.get_data()
+
+    await state.clear()
+    if SchedulerDatabase.add_meeting(tuple(data.values()), send_reminder):
+        await message.answer(text="Встреча успешно добавлена")
+    else:
+        await message.answer(text="Возникла ошибка")
+
+
+class AddInfoForm(StatesGroup):
+    name = State()
+    description = State()
+
+
+@router.message(AddInfoForm.name)
+async def process_info_name(message: Message, state: FSMContext) -> None:
+    await state.update_data(name=message.text)
+    await state.set_state(AddInfoForm.description)
+    await message.answer(text=f"Введите описание раздела: ")
+
+
+@router.message(AddInfoForm.description)
+async def process_info_description(message: Message, state: FSMContext) -> None:
+    await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
+
     data = await state.get_data()
     await state.clear()
-    full_data = list(data.values())
-    full_data[2] = data["time"] + ":00"
-    group_id = full_data[-1]
-    full_data[-1] = 0
-    full_data.append(group_id)
+
+    InfoDatabase.renew_table()
+    InfoDatabase.add_info(**data)
+
+    await message.answer(text=f"Успешно")
+
+
+class ChangeInfoForm(StatesGroup):
+    name = State()
+    description = State()
+    # Да, оно на данный момент аналогично AddInfoForm. Если оно не поменяется, то будет удалено
+
+
+# @router.message(ChangeInfoForm.name)
+# async def process_change_info_name(message: Message, state: FSMContext) -> None:
+#     if not message.text in InfoDatabase.get_info().keys():
+#         await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
+#         return
+#     await state.update_data(name=message.text)
+#     await state.set_state(ChangeInfoForm.description)
+#     await message.answer(text=f"Введите новое описание раздела: ")
+
+
+@router.message(ChangeInfoForm.description)
+async def process_change_info_description(message: Message, state: FSMContext) -> None:
+    await state.update_data(description=message.text.replace(":\n", ":   \n").replace("\n",  "\n "))
+
+    data = await state.get_data()
+    await state.clear()
+
+    InfoDatabase.update_info(**data)
+
+    await message.answer(text=f"Успешно")
+
+
+class RemoveInfoForm(StatesGroup):
+    name = State()
+
+
+@router.message(RemoveInfoForm.name)
+async def process_remove_info(message: Message, state: FSMContext) -> None:
+    if not message.text in InfoDatabase.get_info().keys():
+        await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
+        return
+    await state.update_data(name=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    InfoDatabase.remove_info(**data)
+
+    await message.answer(text=f"Успешно")
     
-    await message.answer(text=str(data), parse_mode=None)
-    hour, minute = [int(i) for i in data["time"].split(":")]
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        cursor.execute("""
-                       INSERT INTO schedule (
-                       description,
-                       day, 
-                       time, 
-                       expired,
-                       group_id
-                       ) VALUES (?, ?, ?, ?, ?)""",
-                       full_data
-                       )
-        
-        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
-        Что на ней будет? - <b>{data["description"]}</b>
-        Когда она будет? - <b>{hour}:{minute}</b>
-        Во сколько приходить? - <b>{data["time"]}</b> """
-
-
-        users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
-
-        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-        scheduler.add_job(
-            send_reminder, 'cron',
-            hour=int(hour),
-            minute=int(minute), 
-            start_date=datetime.datetime.now(), # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-            kwargs={
-                "bot": bot,
-                "users_id": users_ids,
-                "info_message": info_message,
-                "group_id": group_id
-                },
-        )
-
-        scheduler.start()
-    await message.answer(text="Встреча успешно добавлена")
-
-

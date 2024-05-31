@@ -6,16 +6,16 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from utils.database import AdminDatabase
-from all_keyboards import keyboards
+from all_keyboards.inline_keyboards import main_menu_kb
 from cfgs import TOKEN
+from config import main_menu_image_path
+from utils import database
+from aiogram.types import Message, FSInputFile
 from main_commands import (
-    user_commands,
-    work_with_db_commands,
+    main_menu,
+    states,
     db_creating_commands,
-    callbacks,
-    booksview
+    booksview,
 )
 
 
@@ -29,68 +29,52 @@ async def send_msg(bot: Bot):
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer(
-        f"Приветствую, <b>{message.from_user.first_name}</b>",
-        reply_markup=keyboards.main_kb(message.from_user.id))
-    await message.answer(f"Ваш айди -> {message.from_user.id}")
+    await message.answer_photo(
+        photo=FSInputFile(main_menu_image_path),
+        caption="Главное меню",
+        reply_markup=main_menu_kb(message.from_user.id)
+        )
 
 
-async def send_reminder(bot: Bot, users_id: tuple, info_message: str, group_id: int):
+async def send_reminder(info_message: str, group_id: int):
     await bot.send_message(chat_id=group_id, text=info_message)
-    for user_id in users_id:
-        await bot.send_message(chat_id=user_id[0], text=info_message)
 
 
 async def sender_of_reminds(bot: Bot):
     with sqlite3.connect("db.db") as db:
         cursor = db.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tg_id INTEGER UNIQUE,
-            username TEXT,
-            is_subscribed INTEGER,
-            date_of_subscription DATETIME,
-            date_of_unsubscription DATETIME
-        )""")
-        users_ids = cursor.execute("SELECT tg_id FROM users WHERE is_subscribed = 1").fetchall()
-        scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
         all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
-        for i in range(len(all_data)):
-            hour, minute = all_data[i][3].split(":")[:-1]
-            group_id = all_data[i][-1]
-            info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
-            Что на ней будет? - <b>{all_data[i][1]}</b>
-            Когда она будет? - <b>{hour}:{minute}</b>
-            Во сколько приходить? - <b>{all_data[i][2]}</b> """
-
-            scheduler.add_job(
-                send_reminder, 'cron',
-                hour=int(hour),
-                minute=int(minute), 
-                start_date=datetime.now(),  # ЗАМЕНИТЬ НА НУЖНУЮ ДАТУ ПОТОМ!!!!!!!!!!!!!!!!!!!!!!
-                kwargs={
-                "bot": bot,
-                "users_id": users_ids,
-                "info_message": info_message,
-                "group_id": group_id
-                },
-                id="main_job_" + str(i) 
+        for data in all_data:
+            day, month, year = data[2].replace(",", ".").split(".")
+            hour, minute = data[3].split(":")[:-1]
+            meeting = database.SchedulerDatabase(
+                data[0],
+                datetime(
+                    year=int(year),
+                    month=int(month), 
+                    day=int(day), 
+                    hour=int(hour), 
+                    minute=int(minute)
                 )
-        
-        return scheduler
+            )
+            if not meeting.is_expired():
+                data = list(data)
+                data[3] = data[3][:3]
+                database.SchedulerDatabase.add_job(
+                    data=data[1:], 
+                    id=data[0],
+                    reminder_function=send_reminder
+                )
 
 
 async def main():
     dp.include_routers(
-        user_commands.router,
-        work_with_db_commands.router,
+        states.router,
         db_creating_commands.router,
-        callbacks.router,
+        main_menu.router,
         booksview.router,
     )
-    sch = await sender_of_reminds(bot)
-    sch.start()
+    await sender_of_reminds(bot)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
     while True:
