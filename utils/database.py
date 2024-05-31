@@ -163,21 +163,7 @@ class AdminDatabase(Database):
         except Exception as e:
             print(e)
             raise e
-    # @staticmethod
-    # def remove_admin(admin_id: int) -> None:
-    #     """
-    #     Удаляет админа из таблицы по внутреннему айди таблицы
-    #     :param admin_id: telegram id админа
-    #     """
-    #     with sqlite3.connect("db.db") as db:
-    #         try:
-    #             db.cursor().execute(
-    #                 "DELETE FROM admins WHERE id = ?",
-    #                 admin_id
-    #             )
-    #         except Exception as e:
-    #             print(e)
-
+        
     @staticmethod
     def remove_admin(admin_tg_id: int) -> None:
         """
@@ -236,10 +222,9 @@ class SchedulerDatabase(Database):
 
                 SchedulerDatabase.add_job(
                     data=data,
-                    id=id,
+                    id=meeting_id,
                     reminder_function=reminder_function
                 )
-
                 return True
             
         except Exception as e:
@@ -257,7 +242,6 @@ class SchedulerDatabase(Database):
         :param data: данные о встрече
         :param id: id встречи в таблице
         :param reminder_function: функция, отправляющая напоминание
-        :param scheduler: туда можно передать свой scheduler, чтобы
         """
         hour, minute = data[2].split(":")
         new_job_id = "scheduler_job_" + str(id)
