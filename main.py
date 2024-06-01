@@ -1,7 +1,4 @@
 import asyncio
-import sqlite3
-from datetime import datetime
-
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -23,10 +20,6 @@ bot = Bot(TOKEN, parse_mode="HTML")
 dp = Dispatcher(storage=MemoryStorage())
 
 
-async def send_msg(bot: Bot):
-    await bot.send_message(4153686151, "OK!")
-
-
 @dp.message(CommandStart())
 async def start(message: Message):
     await message.answer_photo(
@@ -40,31 +33,14 @@ async def send_reminder(info_message: str, group_id: int):
     await bot.send_message(chat_id=group_id, text=info_message)
 
 
-async def sender_of_reminds(bot: Bot):
-    with sqlite3.connect("db.db") as db:
-        cursor = db.cursor()
-        all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
-        for data in all_data:
-            day, month, year = data[2].replace(",", ".").split(".")
-            hour, minute = data[3].split(":")[:-1]
-            meeting = database.SchedulerDatabase(
-                data[0],
-                datetime(
-                    year=int(year),
-                    month=int(month), 
-                    day=int(day), 
-                    hour=int(hour), 
-                    minute=int(minute)
-                )
-            )
-            if not meeting.is_expired():
-                data = list(data)
-                data[3] = data[3][:3]
-                database.SchedulerDatabase.add_job(
-                    data=data[1:], 
-                    id=data[0],
-                    reminder_function=send_reminder
-                )
+async def sender_of_reminds():
+    all_data = database.SchedulerDatabase.get_schedule()
+    for data in all_data:
+        database.SchedulerDatabase.add_job(
+            data=data[1:], 
+            id=data[0],
+            reminder_function=send_reminder
+        )
 
 
 async def main():
@@ -74,11 +50,9 @@ async def main():
         main_menu.router,
         booksview.router,
     )
-    await sender_of_reminds(bot)
+    await sender_of_reminds()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
-    while True:
-        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":

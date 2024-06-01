@@ -108,7 +108,7 @@ class AdminDatabase(Database):
                 admin_level INTEGER,
                 join_date DATETIME
                 )"""
-                )
+            )
 
     @staticmethod   
     def add_admin(admin_id: int, admin_level: int = 0) -> None:
@@ -201,6 +201,34 @@ class SchedulerDatabase(Database):
                 )"""
             )
 
+    @staticmethod
+    def get_schedule() -> tuple:
+        """
+        Возвращает кортеж всех запланированных и непрошедших встреч
+        """
+        result = []
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
+            for data in all_data:
+                day, month, year = data[2].replace(",", ".").split(".")
+                hour, minute = data[3].split(":")[:-1]
+                meeting = SchedulerDatabase(
+                    data[0],
+                    datetime.datetime(
+                        year=int(year),
+                        month=int(month), 
+                        day=int(day), 
+                        hour=int(hour), 
+                        minute=int(minute)
+                    )
+                )
+                if not meeting.is_expired():
+                    data = list(data)
+                    data[3] = data[3][:3]
+                    result.append(tuple(data))
+
+        return tuple(result)
 
     @staticmethod
     def add_meeting(
