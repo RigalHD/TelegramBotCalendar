@@ -44,12 +44,12 @@ async def info_check_handler(query: CallbackQuery, callback_data: inline_keyboar
 
 @router.callback_query(inline_keyboards.InfoView.filter(F.action == "Schedule_check"))
 async def schedule_check_handler(query: CallbackQuery, callback_data: inline_keyboards.InfoView):
-    meeting = SchedulerDatabase.get_actual_meeting()[1:-2]
-    hour, minute = meeting[2].split(":")
+    meeting: SchedulerDatabase = SchedulerDatabase.get_actual_meeting()
     info_message = f"""Информация о следующей встрече книжного клуба:
-        Что на ней будет? - <b>{meeting[0]}</b>
-        Когда она будет? - <b>{hour}:{minute}</b>
-        Во сколько приходить? - <b>{meeting[1]}</b> """
+        Что на ней будет? - <b>{meeting.description}</b>
+        Когда она будет? - <b>{meeting.date_time.date}</b>
+        Во сколько приходить? - <b>{meeting.date_time.hour}:{meeting.date_time.minute}</b> """
+    
     await query.message.edit_caption(
         caption=info_message,
         reply_markup=inline_keyboards.back_to_info_kb(

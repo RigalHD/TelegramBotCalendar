@@ -35,10 +35,9 @@ async def send_reminder(info_message: str, group_id: int):
 
 async def sender_of_reminds():
     all_data = database.SchedulerDatabase.get_schedule()
-    for data in all_data:
+    for meeting in all_data:
         database.SchedulerDatabase.add_job(
-            data=data[1:], 
-            id=data[0],
+            meeting=meeting,
             reminder_function=send_reminder
         )
 

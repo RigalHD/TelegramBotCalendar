@@ -182,31 +182,26 @@ class AdminDatabase(Database):
 
 
 class SchedulerDatabase(Database):
-    @overload
-    def __init__(self, id: int, description: str, date_time: datetime.datetime) -> None: ...
-    @overload
-    def __init__(self, id: int, description: str, date_time: tuple) -> None: ...
-
-    def __init__(self, id, description, date_time):
+    def __init__(self, _id: int | str):
+        self._all_data = SchedulerDatabase.get_meeting_info(id=int(_id))
+        self._id: int = int(_id)
+        self._description: str = self.all_data[1]
+        self._date_time = datetime.datetime.strptime(
+            f"{self.all_data[2]} {self.all_data[3]}",
+            "%d.%m.%Y %H:%M"
+        )
+        self._expired: bool = self.all_data[3]
+    
+    @staticmethod
+    def get_meeting_info(id: int) -> tuple:
         """
-        Если в date_time передан кортеж ("31.12.2000", "12:00"),
-        то он будет конвертирован в формат datetime.datetime.
-        В случае, если сразу передан объект datetime.datetime,
-        то с ним ничего не произойдет
+        По полученному айди возвращает кортеж
+        с информацией о встрече книжного клуба
         """
-        self._id: int = id
-        self._description: str = description
-        self._expired: bool = False
-
-        if isinstance(date_time, datetime.datetime):
-            self._date_time: datetime.datetime = date_time
-
-        elif isinstance(date_time, tuple) and len(date_time) == 2:
-            self._date_time = datetime.datetime.strptime(
-                f"{date_time[0]} {date_time[1]}",
-                "%d.%m.%Y %H:%M"
-            )
+        with sqlite3.connect("db.db") as db:
+            return db.cursor().execute("SELECT * FROM schedule WHERE id = ?", (id,)).fetchone()
         
+
     @staticmethod
     def renew_table() -> None:
         with sqlite3.connect("db.db") as db:
@@ -231,27 +226,22 @@ class SchedulerDatabase(Database):
         with sqlite3.connect("db.db") as db:
             cursor = db.cursor()
             SchedulerDatabase.renew_table()
-            all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
-            for data in all_data:
-                meeting = SchedulerDatabase(
-                    id=data[0],
-                    date_time=(data[2], data[3])
-                )
+            meetings_ds = cursor.execute("SELECT id FROM schedule WHERE expired = 0").fetchall()
+            for data in meetings_ds:
+                meeting = SchedulerDatabase(data[0])
                 if not meeting.is_expired():
-                    data = list(data)
-                    data[3] = data[3]
-                    result.append(tuple(data))
+                    result.append(meeting)
 
         return tuple(result)
     
     @staticmethod
     def get_actual_meeting() -> tuple:
         """
-        Возвращает кортеж с информацией о следующей 
-        предстоящей встрече книжного клуба
+        Возвращает объект класса SchedulerDatabase,
+        в котором содержится информация о предстоящей встрече книжного клуба
         """
         with sqlite3.connect("db.db") as db:
-            return db.cursor().execute("SELECT * FROM schedule ORDER BY day DESC").fetchone()
+            return SchedulerDatabase(db.cursor().execute("SELECT id FROM schedule ORDER BY day DESC").fetchone()[0])
 
         
     @staticmethod
@@ -260,7 +250,9 @@ class SchedulerDatabase(Database):
         reminder_function,
         ) -> True | False:
         """
-        Добавляет новую встречу в таблицу расписаний.
+        Добавляет новую встречу в таблицу расписаний
+        и включает "напоминалку" об этой встрече.
+
         Возвращает True, если встреча была успешно добавлена,
         иначе - False.
 
@@ -289,8 +281,7 @@ class SchedulerDatabase(Database):
                 ).fetchone()[0]
 
                 SchedulerDatabase.add_job(
-                    data=data,
-                    id=meeting_id,
+                    meeting=SchedulerDatabase(meeting_id),
                     reminder_function=reminder_function
                 )
                 return True
@@ -301,25 +292,23 @@ class SchedulerDatabase(Database):
 
     @staticmethod
     def add_job(
-        data: tuple | list,
-        id: int,
+        meeting,
         reminder_function
         ) -> None:
         """
         Добавляет "работу" через библиотеку apscheduler
-        :param data: данные о встрече
-        :param id: id встречи в таблице
+        :param meeting: объект класса SchedulerDatabase
         :param reminder_function: функция, отправляющая напоминание
         """
-        hour, minute = data[2].split(":")
-        new_job_id = "scheduler_job_" + str(id)
+        new_job_id = "scheduler_job_" + str(meeting.id)
                 
-        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
-        Что на ней будет? - <b>{data[0]}</b>
-        Когда она будет? - <b>{hour}:{minute}</b>
-        Во сколько приходить? - <b>{data[1]}</b> """
+        info_message = f"""Информация о следующей встрече книжного клуба:
+        Что на ней будет? - <b>{meeting.description}</b>
+        Когда она будет? - <b>{meeting.date_time.date}</b>
+        Во сколько приходить? - <b>{meeting.date_time.hour}:{meeting.date_time.minute}</b>
+        """
 
-        day, month, year = data[1].replace(",", ".").split(".")
+        day, month, year = meeting.date_time.strftime("%d.%m.%Y").split(".")
         date = datetime.datetime.strptime(f'{year}-{month}-{day}', "%Y-%m-%d") + datetime.timedelta(days=1)
         scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
         scheduler.add_job(
@@ -345,7 +334,7 @@ class SchedulerDatabase(Database):
         если она является таковой и возращает True,
         если же встреча не просрочена, то возвращает False
         """
-        if self._expired:
+        if self._expired is True:
             return True
         if datetime.datetime.now() > self._date_time:
             with sqlite3.connect("db.db") as db:
@@ -356,12 +345,22 @@ class SchedulerDatabase(Database):
             self._expired = True
             return True
         return False
-
-
+    
     @property
     def id(self) -> int:
         return self._id
 
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @property
+    def date_time(self) -> datetime.datetime:
+        return self._date_time
+
+    @property
+    def all_data(self) -> tuple:
+        return self._all_data
 
 class BookDatabase(Database):
     def __init__(self, id: int):
