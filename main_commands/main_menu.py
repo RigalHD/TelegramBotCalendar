@@ -25,8 +25,8 @@ async def books_view_handler(query: CallbackQuery, callback_data: inline_keyboar
 async def info_view_handler(query: CallbackQuery, callback_data: inline_keyboards.MainMenu):
     await query.message.edit_media(
         media=InputMediaPhoto(media=FSInputFile(info_image_path)),
-        
     )
+    
     await query.message.edit_caption(
         caption="Информация",
         reply_markup=inline_keyboards.info_view_kb()

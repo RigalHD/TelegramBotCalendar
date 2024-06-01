@@ -187,6 +187,22 @@ class SchedulerDatabase(Database):
         self._expired: bool = False
 
     @staticmethod
+    def renew_table() -> None:
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS schedule (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                description TEXT,
+                day DATE,
+                time TIME,
+                expired INTEGER,
+                group_id INTEGER
+                )"""
+            )
+
+
+    @staticmethod
     def add_meeting(
         data: list | tuple,
         reminder_function,
@@ -440,7 +456,10 @@ class BookDatabase(Database):
                     image BLOB DEFAULT NULL
                     )""")
 
-    def get_columns_names_dict(self, full: bool = False) -> dict | None:
+    def get_columns_names_dict(
+            self,
+            full: bool = False
+            ) -> dict | None:
         """
         Возвращает словарь c колонками таблицы книг ("Имя колонки на русском": "Имя колонки в таблице")
         или возвращает None, если возникла ошибка
