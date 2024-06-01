@@ -54,7 +54,7 @@ async def book_addditional_info_handler(query: CallbackQuery, callback_data: inl
             has_rus_copolumns=True
             ).items()
         ]
-        )
+    )
     await query.message.edit_caption(
         caption="Дополнительная информация о книге: \n" + info,
         reply_markup=inline_keyboards.book_info_additions_kb(book.id))
