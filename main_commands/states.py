@@ -4,12 +4,10 @@ import sqlite3
 import datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
 from utils.database import InfoDatabase, SchedulerDatabase
-from config import GROUP_ID
 import os
 
 router = Router()

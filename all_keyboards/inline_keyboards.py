@@ -1,5 +1,4 @@
 from aiogram.types import InlineKeyboardButton
-
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 
@@ -45,7 +44,7 @@ def info_view_kb():
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-        text="Расписание",
+        text="Встреча книжного клуба",
         callback_data=InfoView(
             action="Schedule_check",
             name="-"

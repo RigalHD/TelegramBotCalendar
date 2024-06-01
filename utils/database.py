@@ -232,11 +232,14 @@ class SchedulerDatabase(Database):
         return tuple(result)
     
     @staticmethod
-    def get_current_meeting() -> tuple:
+    def get_actual_meeting() -> tuple:
         """
         Возвращает кортеж с информацией о следующей 
         предстоящей встрече книжного клуба
         """
+        with sqlite3.connect("db.db") as db:
+            return db.cursor().execute("SELECT * FROM schedule ORDER BY day DESC").fetchone()
+
         
     @staticmethod
     def add_meeting(
