@@ -194,6 +194,11 @@ async def process_day(message: Message, state: FSMContext) -> None:
     try:
         data = [int(el) for el in message.text.replace("-", ".").replace(",", ".").split(".")]
         data = datetime.date(day=data[0], month=data[1], year=data[2])
+        for meeting in SchedulerDatabase.get_schedule():
+            day, month, year = [int(i) for i in meeting[2].split(".")]
+            if data == datetime.date(day=day, month=month, year=year):
+                await message.answer(text="На этот день уже назначена встреча книжного клуба")
+                return
         if data < datetime.date.today():
             await message.answer(text="Мы пока не изобрели машину времени")
             return
@@ -227,9 +232,8 @@ async def process_time(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(time=message.text)
 
-
     data = await state.get_data()
-
+    data["time"] = data["time"][:-3]
     await state.clear()
     if SchedulerDatabase.add_meeting(tuple(data.values()), send_reminder):
         await message.answer(text="Встреча успешно добавлена")
@@ -255,7 +259,6 @@ async def process_info_description(message: Message, state: FSMContext) -> None:
 
     data = await state.get_data()
     await state.clear()
-
     InfoDatabase.renew_table()
     InfoDatabase.add_info(**data)
 

@@ -209,10 +209,11 @@ class SchedulerDatabase(Database):
         result = []
         with sqlite3.connect("db.db") as db:
             cursor = db.cursor()
+            SchedulerDatabase.renew_table()
             all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
             for data in all_data:
                 day, month, year = data[2].replace(",", ".").split(".")
-                hour, minute = data[3].split(":")[:-1]
+                hour, minute = data[3].split(":")
                 meeting = SchedulerDatabase(
                     data[0],
                     datetime.datetime(
@@ -225,11 +226,18 @@ class SchedulerDatabase(Database):
                 )
                 if not meeting.is_expired():
                     data = list(data)
-                    data[3] = data[3][:3]
+                    data[3] = data[3]
                     result.append(tuple(data))
 
         return tuple(result)
-
+    
+    @staticmethod
+    def get_current_meeting() -> tuple:
+        """
+        Возвращает кортеж с информацией о следующей 
+        предстоящей встрече книжного клуба
+        """
+        
     @staticmethod
     def add_meeting(
         data: list | tuple,

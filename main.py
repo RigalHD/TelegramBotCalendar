@@ -26,7 +26,7 @@ async def start(message: Message):
         photo=FSInputFile(main_menu_image_path),
         caption="Главное меню",
         reply_markup=main_menu_kb(message.from_user.id)
-        )
+    )
 
 
 async def send_reminder(info_message: str, group_id: int):
