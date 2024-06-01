@@ -2,6 +2,7 @@ from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from abc import ABC, abstractmethod
+from typing import overload
 from config import GROUP_ID
 import sqlite3
 import datetime
@@ -181,11 +182,31 @@ class AdminDatabase(Database):
 
 
 class SchedulerDatabase(Database):
-    def __init__(self, id: int, date_time: datetime.datetime):
+    @overload
+    def __init__(self, id: int, description: str, date_time: datetime.datetime) -> None: ...
+    @overload
+    def __init__(self, id: int, description: str, date_time: tuple) -> None: ...
+
+    def __init__(self, id, description, date_time):
+        """
+        Если в date_time передан кортеж ("31.12.2000", "12:00"),
+        то он будет конвертирован в формат datetime.datetime.
+        В случае, если сразу передан объект datetime.datetime,
+        то с ним ничего не произойдет
+        """
         self._id: int = id
-        self._date_time: datetime.datetime = date_time
+        self._description: str = description
         self._expired: bool = False
 
+        if isinstance(date_time, datetime.datetime):
+            self._date_time: datetime.datetime = date_time
+
+        elif isinstance(date_time, tuple) and len(date_time) == 2:
+            self._date_time = datetime.datetime.strptime(
+                f"{date_time[0]} {date_time[1]}",
+                "%d.%m.%Y %H:%M"
+            )
+        
     @staticmethod
     def renew_table() -> None:
         with sqlite3.connect("db.db") as db:
@@ -212,17 +233,9 @@ class SchedulerDatabase(Database):
             SchedulerDatabase.renew_table()
             all_data = cursor.execute("SELECT * FROM schedule WHERE expired = 0").fetchall()
             for data in all_data:
-                day, month, year = data[2].replace(",", ".").split(".")
-                hour, minute = data[3].split(":")
                 meeting = SchedulerDatabase(
-                    data[0],
-                    datetime.datetime(
-                        year=int(year),
-                        month=int(month), 
-                        day=int(day), 
-                        hour=int(hour), 
-                        minute=int(minute)
-                    )
+                    id=data[0],
+                    date_time=(data[2], data[3])
                 )
                 if not meeting.is_expired():
                     data = list(data)
@@ -326,11 +339,14 @@ class SchedulerDatabase(Database):
 
         scheduler.start()
 
-    def make_expired_if_expired(self) -> None:
+    def is_expired(self) -> True | False:
         """
         Устанавливает статус встречи как просроченную,
-        если она является таковой
+        если она является таковой и возращает True,
+        если же встреча не просрочена, то возвращает False
         """
+        if self._expired:
+            return True
         if datetime.datetime.now() > self._date_time:
             with sqlite3.connect("db.db") as db:
                 db.cursor().execute(
@@ -338,13 +354,9 @@ class SchedulerDatabase(Database):
                     (self._id,)
                 )
             self._expired = True
-
-
-    def is_expired(self) -> True | False:
-        self.make_expired_if_expired()
-        if self._expired == True:
             return True
         return False
+
 
     @property
     def id(self) -> int:
