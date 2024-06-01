@@ -32,11 +32,6 @@ async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards
         reply_markup=inline_keyboards.book_info_kb(book.id)
         )
 
-        # book_info_message: str = "\n".join([f"{key}: {value} \n{'-' * 20}" for key, value in book_info.items()])
-        
-        # await query.message.answer_photo(photo=FSInputFile(photo_path))
-        # await query.message.answer(text=book_info_message)
-
 
 @router.callback_query(inline_keyboards.BookInfo.filter(F.action == "book_description_check"))
 async def book_description_handler(query: CallbackQuery, callback_data: inline_keyboards.BookInfo):
@@ -52,11 +47,13 @@ async def book_addditional_info_handler(query: CallbackQuery, callback_data: inl
     book = BookDatabase(int(callback_data.book_id))
     
     info = "\n" + ("-" * 20) + "\n" + "\n".join(
-        [f"{key}: {value} \n{'-' * 20}" for key, value in book.get_full_book_info(
+        [
+            f"{key}: {value} \n{'-' * 20}" for key, value in book.get_full_book_info(
             has_name=False,
             has_description=False,
             has_rus_copolumns=True
-            ).items()]
+            ).items()
+        ]
         )
     await query.message.edit_caption(
         caption="Дополнительная информация о книге: \n" + info,
@@ -76,7 +73,9 @@ async def bookinfo_back_to_info_handler(query: CallbackQuery, callback_data: inl
 async def bookinfo_back_handler(query: CallbackQuery, callback_data: inline_keyboards.BookList):
     await query.message.edit_media(
         media=InputMediaPhoto(media=FSInputFile(all_books_image_path))
-        )
+    )
     await query.message.edit_caption(
         caption="Мы рекомендуем вам эти книги",
-        reply_markup=inline_keyboards.all_books_kb())
+        reply_markup=inline_keyboards.all_books_kb()
+    )
+    

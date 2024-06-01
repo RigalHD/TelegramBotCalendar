@@ -123,13 +123,6 @@ def admin_panel_kb(user_id: int):
         )
 
         builder.row(
-            # InlineKeyboardButton(
-            # text="Изменить информацию",
-            # callback_data=AdminPanel(
-            #     action="Change_info"
-            #     ).pack()
-            # ),
-
             InlineKeyboardButton(
             text="Удалить информацию",
             callback_data=AdminPanel(
