@@ -193,8 +193,7 @@ async def process_day(message: Message, state: FSMContext) -> None:
         data = [int(el) for el in message.text.replace("-", ".").replace(",", ".").split(".")]
         data = datetime.date(day=data[0], month=data[1], year=data[2])
         for meeting in SchedulerDatabase.get_schedule():
-            day, month, year = [int(i) for i in meeting[2].split(".")]
-            if data == datetime.date(day=day, month=month, year=year):
+            if data == meeting.date_time.date():
                 await message.answer(text="На этот день уже назначена встреча книжного клуба")
                 return
         if data < datetime.date.today():

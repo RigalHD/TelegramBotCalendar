@@ -47,8 +47,9 @@ async def schedule_check_handler(query: CallbackQuery, callback_data: inline_key
     meeting: SchedulerDatabase = SchedulerDatabase.get_actual_meeting()
     info_message = f"""Информация о следующей встрече книжного клуба:
         Что на ней будет? - <b>{meeting.description}</b>
-        Когда она будет? - <b>{meeting.date_time.date}</b>
-        Во сколько приходить? - <b>{meeting.date_time.hour}:{meeting.date_time.minute}</b> """
+        Когда она будет? - <b>{meeting.date_time.date().strftime("%d.%m.%y")}</b>
+        Во сколько приходить? - <b>{str(meeting.date_time.time())[:-3]}</b>
+        """
     
     await query.message.edit_caption(
         caption=info_message,

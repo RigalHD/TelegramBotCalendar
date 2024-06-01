@@ -280,11 +280,11 @@ class SchedulerDatabase(Database):
                             data
                 ).fetchone()[0]
 
-                SchedulerDatabase.add_job(
-                    meeting=SchedulerDatabase(meeting_id),
-                    reminder_function=reminder_function
-                )
-                return True
+            SchedulerDatabase.add_job(
+                meeting=SchedulerDatabase(meeting_id),
+                reminder_function=reminder_function
+            )
+            return True
             
         except Exception as e:
             print(e)
@@ -301,11 +301,10 @@ class SchedulerDatabase(Database):
         :param reminder_function: функция, отправляющая напоминание
         """
         new_job_id = "scheduler_job_" + str(meeting.id)
-                
         info_message = f"""Информация о следующей встрече книжного клуба:
         Что на ней будет? - <b>{meeting.description}</b>
-        Когда она будет? - <b>{meeting.date_time.date}</b>
-        Во сколько приходить? - <b>{meeting.date_time.hour}:{meeting.date_time.minute}</b>
+        Когда она будет? - <b>{meeting.date_time.date().strftime("%d.%m.%y")}</b>
+        Во сколько приходить? - <b>{str(meeting.date_time.time())[:-3]}</b>
         """
 
         day, month, year = meeting.date_time.strftime("%d.%m.%Y").split(".")
@@ -325,7 +324,6 @@ class SchedulerDatabase(Database):
             },
             id=new_job_id
         )
-
         scheduler.start()
 
     def is_expired(self) -> True | False:
