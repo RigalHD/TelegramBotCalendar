@@ -16,7 +16,7 @@ async def books_view_handler(query: CallbackQuery, callback_data: inline_keyboar
         media=InputMediaPhoto(media=FSInputFile(all_books_image_path)),
     )
     await query.message.edit_caption(
-        caption="Мы рекомендуем вам эти книги",
+        caption="Список всех книг. Страница: 1",
         reply_markup=inline_keyboards.all_books_kb()
     )
 

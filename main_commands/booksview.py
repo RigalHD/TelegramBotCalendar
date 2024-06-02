@@ -1,10 +1,11 @@
 from aiogram import Router
-from aiogram.types import Message, FSInputFile, CallbackQuery
+from aiogram.types import FSInputFile, CallbackQuery
 from all_keyboards import inline_keyboards
 from config import all_books_image_path
 from aiogram import Router, F
 from utils.database import BookDatabase
 from aiogram.types.input_media_photo import InputMediaPhoto
+
 router = Router()
 
 
@@ -33,13 +34,22 @@ async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards
         )
 
 
+@router.callback_query(inline_keyboards.SwitchBooksViewPage.filter(F.action == "switch_page"))
+async def switch_page_handler(query: CallbackQuery, callback_data: inline_keyboards.SwitchBooksViewPage):
+    await query.message.edit_caption(
+        caption="Список всех книг. Страница: " + str(callback_data.page + 1),
+        reply_markup=inline_keyboards.all_books_kb(callback_data.page)
+    )
+
+
 @router.callback_query(inline_keyboards.BookInfo.filter(F.action == "book_description_check"))
 async def book_description_handler(query: CallbackQuery, callback_data: inline_keyboards.BookInfo):
     book = BookDatabase(int(callback_data.book_id))
     info = book.get_book_info('description')
     await query.message.edit_caption(
         caption=info,
-        reply_markup=inline_keyboards.book_info_additions_kb(book.id))
+        reply_markup=inline_keyboards.book_info_additions_kb(book.id)
+    )
     
 
 @router.callback_query(inline_keyboards.BookInfo.filter(F.action == "book_additional_info_check"))

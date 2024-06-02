@@ -159,21 +159,68 @@ class BookList(CallbackData, prefix="pag"):
     book_id: int
 
 
-def all_books_kb():
+class SwitchBooksViewPage(CallbackData, prefix="pag"):
+    action: str
+    page: int
+
+
+def all_books_kb(page: int = 0):
     books_dict = BookDatabase.get_all_books()
     builder = InlineKeyboardBuilder()
     if books_dict:
-        for book_id in books_dict.keys():
-            builder.row(
-                InlineKeyboardButton(
-                    text=books_dict[book_id]["name"],
-                    callback_data=BookList(
-                        action="book_check",
-                        book_id=book_id
-                    ).pack()
+        try:
+            for book_id in tuple(books_dict.keys())[page * 4 : (page + 1) * 4]:
+                builder.row(
+                    InlineKeyboardButton(
+                        text=books_dict[book_id]["name"],
+                        callback_data=BookList(
+                            action="book_check",
+                            book_id=book_id
+                        ).pack()
+                    )
                 )
+        except IndexError:
+            for book_id in tuple(books_dict.keys())[page * 4 :]:
+                builder.row(
+                    InlineKeyboardButton(
+                        text=books_dict[book_id]["name"],
+                        callback_data=BookList(
+                            action="book_check",
+                            book_id=book_id
+                        ).pack()
+                    )
+                )
+    
+    next_page_button = InlineKeyboardButton(
+                text="След. страница",
+                callback_data=SwitchBooksViewPage(
+                    action="switch_page",
+                    page=page + 1
+                ).pack()
+            )
+    
+    previous_page_button = InlineKeyboardButton(
+                text="Пред. страница",
+                callback_data=SwitchBooksViewPage(
+                    action="switch_page",
+                    page=page - 1
+                ).pack()
             )
 
+    switch_page_buttons = []
+    if page == 0:
+        next_page_button.text = "Следующая страница ------------>"
+        switch_page_buttons.append(next_page_button)
+
+    elif page == len(books_dict.keys()) / 4\
+        or page == len(books_dict.keys()) // 4 + ((len(books_dict.keys()) % 4) // 4):
+        previous_page_button.text = "<------------ Предущая страница"
+        switch_page_buttons.append(previous_page_button)
+    else:
+        switch_page_buttons = [previous_page_button, next_page_button]
+    builder.row(
+        *switch_page_buttons
+    )
     builder.row(
         InlineKeyboardButton(
             text="В главное меню",
