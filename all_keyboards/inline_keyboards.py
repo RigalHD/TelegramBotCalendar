@@ -212,7 +212,7 @@ def all_books_kb(page: int = 0):
         next_page_button.text = "Следующая страница ------------>"
         switch_page_buttons.append(next_page_button)
 
-    elif page == len(books_dict.keys()) / 4\
+    elif page == (len(books_dict.keys()) / 4) - 1\
         or page == len(books_dict.keys()) // 4 + ((len(books_dict.keys()) % 4) // 4):
         previous_page_button.text = "<------------ Предущая страница"
         switch_page_buttons.append(previous_page_button)
