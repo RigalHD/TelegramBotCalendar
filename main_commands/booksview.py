@@ -37,7 +37,7 @@ async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards
 @router.callback_query(inline_keyboards.SwitchBooksViewPage.filter(F.action == "switch_page"))
 async def switch_page_handler(query: CallbackQuery, callback_data: inline_keyboards.SwitchBooksViewPage):
     await query.message.edit_caption(
-        caption="Список всех книг. Страница: " + str(callback_data.page + 1),
+        caption="Список всех книг. Страница: " +  str(callback_data.page + 1),
         reply_markup=inline_keyboards.all_books_kb(callback_data.page)
     )
 

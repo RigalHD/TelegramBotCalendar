@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from all_keyboards.keyboards import book_age_rating_kb
 from aiogram.types import ReplyKeyboardRemove
 from main import bot, send_reminder
-from utils.database import InfoDatabase, SchedulerDatabase
+from utils.database import InfoDatabase, SchedulerDatabase, ProfilesDatabase
 import os
 
 router = Router()
@@ -286,3 +286,37 @@ async def process_remove_info(message: Message, state: FSMContext) -> None:
 
     await message.answer(text=f"Успешно")
     
+
+class ProfileChangeNameForm(StatesGroup):
+    name = State()
+
+
+@router.message(ProfileChangeNameForm.name)
+async def process_change_profile_name(message: Message, state: FSMContext) -> None:
+    if len(message.text) > 64:
+        await message.answer(text=f"Максимальная длина псевдонима - 64 символа")
+        return
+    await state.update_data(name=message.text)
+    data = await state.get_data()
+    await state.clear()
+    if ProfilesDatabase(message.from_user.id).change_name(data["name"]):
+        await message.answer(text=f"Успешно")
+    else:
+        await message.answer(text=f"Ошибка")
+
+class ProfileChangeDescriptionForm(StatesGroup):
+    bio = State()
+
+
+@router.message(ProfileChangeDescriptionForm.bio)
+async def process_change_profile_bio(message: Message, state: FSMContext) -> None:
+    if len(message.text) > 896:
+        await message.answer(text=f"Максимальная длина биографии - 896 символов")
+        return
+    await state.update_data(bio=message.text)
+    data = await state.get_data()
+    await state.clear()
+    if ProfilesDatabase(message.from_user.id).change_bio(data["bio"]):
+        await message.answer(text=f"Успешно")
+    else:
+        await message.answer(text=f"Ошибка")

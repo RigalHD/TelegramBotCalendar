@@ -2,7 +2,7 @@ from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from abc import ABC, abstractmethod
-from typing import overload
+from typing import Union
 from config import GROUP_ID
 import sqlite3
 import datetime
@@ -27,6 +27,148 @@ class Database:
             except Exception as e:
                 print(e)
                 return None
+
+
+class ProfilesDatabase(Database):
+    def __init__(self, telegram_id: int):
+        self._all_data: dict[str: Union[int, str, None, datetime.date]] = \
+            ProfilesDatabase.get_profile_info(telegram_id)
+        self._id: int = self._all_data["id"]
+        self._telegram_id: int = self._all_data["telegram_id"]
+        self._name: str = self._all_data["name"]
+        self._bio: str = self._all_data["bio"]
+        self._join_date: datetime.date = self._all_data["join_date"]
+
+    @staticmethod
+    def renew_table() -> None:
+        with sqlite3.connect("db.db") as db:
+            db.cursor().execute("""CREATE TABLE IF NOT EXISTS profiles(
+                                id INTEGER PRIMARY KEY, 
+                                telegram_id INTEGER NOT NULL UNIQUE,
+                                name TEXT DEFAULT NULL,
+                                bio TEXT DEFAULT 'Описание отсутствует',
+                                join_date DATE NOT NULL
+                                )"""
+                                )
+
+    @staticmethod
+    def get_profile_info(
+        telegram_id: int
+        ) -> dict[str: Union[int, str, None, datetime.date]]:
+        """
+        Возвращает словарь, в котором находятся все данные о пользователе
+        
+        :param telegram_id: telegram id пользователя
+        """
+        if not ProfilesDatabase.does_profile_exist(telegram_id):
+            ProfilesDatabase.add_profile(telegram_id)
+
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            data = cursor.execute(
+                """SELECT *
+                FROM profiles
+                WHERE telegram_id = ?""",
+                (telegram_id,)
+            ).fetchone()
+            
+            return {
+                "id": int(data[0]),
+                "telegram_id": data[1],
+                "name": data[2],
+                "bio": data[3],
+                "join_date": datetime.datetime.strptime(data[4], "%Y-%m-%d").date().strftime("%d.%m.%Y")
+            }
+    
+    @staticmethod
+    def does_profile_exist(telegram_id: int) -> bool:
+        """
+        :param telegram_id: telegram id пользователя
+        :return: True - профиль пользователя существует, False - нет
+        """
+        ProfilesDatabase.renew_table()
+        with sqlite3.connect("db.db") as db:
+            return bool(db.cursor().execute(
+                "SELECT COUNT(*) FROM profiles WHERE telegram_id = ?""", 
+                (telegram_id,)
+                ).fetchone()[0]
+            )
+
+    @staticmethod
+    def add_profile(telegram_id: int) -> True | False:
+        """
+        Добавляет новый профиль в таблицу,
+        если такого еще нет
+
+        :param telegram_id: telegram id пользователя
+        :return: True - успех, False - возникла ошибка, или пользователь уже существует
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                cursor = db.cursor()
+                cursor.execute(
+                    "INSERT INTO profiles(telegram_id, join_date) VALUES(?, ?)",
+                    (telegram_id, datetime.datetime.now().date())
+                )
+        except Exception as e:
+            print(e)
+            return False
+
+    def change_bio(self, bio: str) -> True | False:
+        """
+        Изменяет биографию пользователя
+        
+        :param bio: новая биография пользователя
+        :return: True - успех, False - возникла ошибка
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    """UPDATE profiles SET bio = ? WHERE id = ?""",
+                    (bio, self._id)
+                )
+                return True
+        except Exception as e:
+            print(e)
+            return False
+        
+    def change_name(self, name: str) -> True | False:
+        """
+        Изменяет имя профиля пользователя
+        
+        :param name: новое имя пользователя
+        :return: True - успех, False - возникла ошибка
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    """UPDATE profiles SET name = ? WHERE id = ?""",
+                    (name, self._id)
+                )
+                return True
+        except Exception as e:
+            print(e)
+            return False
+    
+    @property
+    def id(self) -> int:
+        return self._id
+    
+    @property
+    def telegram_id(self) -> int:
+        return self._telegram_id
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def bio(self) -> str:
+        return self._bio
+    
+    @property
+    def join_date(self) -> datetime.date:
+        return self._join_date
 
 
 class InfoDatabase(Database):

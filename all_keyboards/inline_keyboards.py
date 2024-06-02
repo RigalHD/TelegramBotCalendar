@@ -40,7 +40,7 @@ class InfoView(CallbackData, prefix="pag"):
     name: str = ""
 
 
-def info_view_kb():
+def info_view_kb(user_id):
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -48,6 +48,15 @@ def info_view_kb():
         callback_data=InfoView(
             action="Schedule_check",
             name="-"
+            ).pack()
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+        text="Мой профиль",
+        callback_data=ProfileView(
+            action="View_my_profile",
+            telegram_id=user_id
             ).pack()
         )
     )
@@ -71,7 +80,6 @@ def info_view_kb():
     ))
     return builder.as_markup()
 
-
 def back_to_info_kb(
         name: str,
         user_id: int, 
@@ -88,6 +96,41 @@ def back_to_info_kb(
                 ).pack()
             )
         )
+    builder.row(
+        InlineKeyboardButton(
+        text="Вернуться к просмотру информации",
+        callback_data=InfoView(
+            action="Return_to_info_view",
+            name="-"
+            ).pack()
+        )
+    )
+    return builder.as_markup()
+
+
+class ProfileView(CallbackData, prefix="pag"):
+    action: str
+
+
+def profile_view_kb():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+        text="Изменить псевдоним",
+        callback_data=ProfileView(
+            action="Change_name",
+            ).pack()
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+        text="Изменить биографию",
+        callback_data=ProfileView(
+            action="Change_bio",
+            ).pack()
+        )
+    )
+
     builder.row(
         InlineKeyboardButton(
         text="Вернуться к просмотру информации",

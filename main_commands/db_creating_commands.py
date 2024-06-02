@@ -7,7 +7,8 @@ from utils.database import (
     BookDatabase,
     AdminDatabase, 
     InfoDatabase, 
-    SchedulerDatabase
+    SchedulerDatabase,
+    ProfilesDatabase
     )
 
 
@@ -25,3 +26,4 @@ async def db_create(message: Message, command: CommandObject):
             BookDatabase.renew_table()
             InfoDatabase.renew_table()
             SchedulerDatabase.renew_table()
+            ProfilesDatabase.renew_table()
