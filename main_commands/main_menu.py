@@ -5,7 +5,7 @@ from config import *
 from all_keyboards import inline_keyboards
 from .states import MeetingsForm, BooksForm, AddInfoForm, ChangeInfoForm, RemoveInfoForm
 from aiogram.fsm.context import FSMContext
-from utils.database import AdminDatabase, InfoDatabase
+from utils.database import AdminDatabase, InfoDatabase, SchedulerDatabase
 
 router = Router()
 
@@ -39,6 +39,25 @@ async def info_check_handler(query: CallbackQuery, callback_data: inline_keyboar
         caption=InfoDatabase.get_info()[callback_data.name],
         reply_markup=inline_keyboards.back_to_info_kb(callback_data.name, query.from_user.id),
         parse_mode="Markdown"
+    )
+
+
+@router.callback_query(inline_keyboards.InfoView.filter(F.action == "Schedule_check"))
+async def schedule_check_handler(query: CallbackQuery, callback_data: inline_keyboards.InfoView):
+    meeting: SchedulerDatabase = SchedulerDatabase.get_actual_meeting()
+    info_message = f"""Информация о следующей встрече книжного клуба:
+        Что на ней будет? - <b>{meeting.description}</b>
+        Когда она будет? - <b>{meeting.date_time.date().strftime("%d.%m.%y")}</b>
+        Во сколько приходить? - <b>{str(meeting.date_time.time())[:-3]}</b>
+        """
+    
+    await query.message.edit_caption(
+        caption=info_message,
+        reply_markup=inline_keyboards.back_to_info_kb(
+            callback_data.name, 
+            query.from_user.id,
+            has_info_change_button=False
+        )
     )
 
 

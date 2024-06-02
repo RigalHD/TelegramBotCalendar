@@ -1,5 +1,4 @@
 from aiogram.types import InlineKeyboardButton
-
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 
@@ -43,6 +42,15 @@ class InfoView(CallbackData, prefix="pag"):
 
 def info_view_kb():
     builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+        text="Встреча книжного клуба",
+        callback_data=InfoView(
+            action="Schedule_check",
+            name="-"
+            ).pack()
+        )
+    )
     InfoDatabase.renew_table()
     if InfoDatabase.get_info():
         for key in InfoDatabase.get_info().keys():
@@ -64,9 +72,13 @@ def info_view_kb():
     return builder.as_markup()
 
 
-def back_to_info_kb(name: str, user_id: int):
+def back_to_info_kb(
+        name: str,
+        user_id: int, 
+        has_info_change_button: bool = True
+        ):
     builder = InlineKeyboardBuilder()
-    if AdminDatabase.is_admin(user_id):
+    if AdminDatabase.is_admin(user_id) and has_info_change_button:
         builder.row(
             InlineKeyboardButton(
             text="Изменить раздел",
