@@ -91,17 +91,6 @@ async def process_book_film_adaptations(message: Message, state: FSMContext) -> 
         "то отправьте возрастной рейтинг, выбрав его отсюда: <b>7-10, 10-14, 14-18</b>",
         reply_markup=book_age_rating_kb()
         )
-    
-
-# @router.message(BooksForm.rating)
-# async def process_book_rating(message: Message, state: FSMContext) -> None:
-#     try:
-#         await state.update_data(rating=float(message.text))
-#     except ValueError:
-#         await message.answer("Некорректный рейтинг")
-#         return
-#     await state.set_state(BooksForm.age_rating)
-#     await message.answer(text="ок. теперь выберите возрастной рейтинг картинки ", reply_markup=book_age_rating_kb())
 
 
 @router.message(BooksForm.age_rating)
@@ -126,7 +115,7 @@ async def process_book_image(message: Message, state: FSMContext) -> None:
         try:
             if not os.path.isdir("bot_images/"):
                 os.makedirs("bot_images/")
-            src = "bot_images/" + message.photo[-1].file_id + ".jpg"  # Если у вас есть проблемы с этой строкой, то создайте в папке проекта папку bot_images/
+            src = "bot_images/" + message.photo[-1].file_id + ".jpg"
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file.getvalue())
 
@@ -266,16 +255,6 @@ class ChangeInfoForm(StatesGroup):
     name = State()
     description = State()
     # Да, оно на данный момент аналогично AddInfoForm. Если оно не поменяется, то будет удалено
-
-
-# @router.message(ChangeInfoForm.name)
-# async def process_change_info_name(message: Message, state: FSMContext) -> None:
-#     if not message.text in InfoDatabase.get_info().keys():
-#         await message.answer(text=f"Такого раздела не существует. Введите правильное название раздела")
-#         return
-#     await state.update_data(name=message.text)
-#     await state.set_state(ChangeInfoForm.description)
-#     await message.answer(text=f"Введите новое описание раздела: ")
 
 
 @router.message(ChangeInfoForm.description)

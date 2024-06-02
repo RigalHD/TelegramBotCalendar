@@ -11,9 +11,6 @@ import datetime
 class Database:
     def __init__(self):
         pass
-    
-    def renew_table(self):
-        pass
 
     def get_colunms_names(self, table_name: str) -> tuple | None:
         """
@@ -201,7 +198,6 @@ class SchedulerDatabase(Database):
         with sqlite3.connect("db.db") as db:
             return db.cursor().execute("SELECT * FROM schedule WHERE id = ?", (id,)).fetchone()
         
-
     @staticmethod
     def renew_table() -> None:
         with sqlite3.connect("db.db") as db:
@@ -241,9 +237,12 @@ class SchedulerDatabase(Database):
         в котором содержится информация о предстоящей встрече книжного клуба
         """
         with sqlite3.connect("db.db") as db:
-            return SchedulerDatabase(db.cursor().execute("SELECT id FROM schedule ORDER BY day DESC").fetchone()[0])
+            return SchedulerDatabase(
+                db.cursor().execute(
+                    "SELECT id FROM schedule WHERE expired = 0 ORDER BY day DESC"
+                    ).fetchone()[0]
+                )
 
-        
     @staticmethod
     def add_meeting(
         data: list | tuple,
@@ -360,6 +359,7 @@ class SchedulerDatabase(Database):
     def all_data(self) -> tuple:
         return self._all_data
 
+
 class BookDatabase(Database):
     def __init__(self, id: int):
         self._id: int = id
@@ -384,7 +384,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
 
-    
     @staticmethod
     def get_colunms_names(full: bool = False) -> list | None:
         """
@@ -451,7 +450,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
             return None
-        
     
     @staticmethod
     def get_amount_of_books(amount: int) -> dict:
@@ -579,7 +577,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
             return None
-        
         
     def get_book_info(self, column_name: str) -> str | None:
         """
