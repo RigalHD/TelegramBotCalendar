@@ -1,6 +1,6 @@
 .vscode/
 __pycache__/
-bot_images/*.jpg
+bot_images/*
 .idea/
 
 .pyc
@@ -10,6 +10,10 @@ bot_images/*.jpg
 db.db
 
 cfgs.py
+qq.sqlite3
+-- SQLite.sql
 
 FileNotFoundErrors.txt
 *.txt
+
+!requirements.txt
