@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 
-from utils.database import BookDatabase, AdminDatabase, InfoDatabase
+from utils.database import BookDatabase, AdminDatabase, InfoDatabase, ProfilesDatabase
 
 
 class MainMenu(CallbackData, prefix="pag"):
@@ -40,7 +40,7 @@ class InfoView(CallbackData, prefix="pag"):
     name: str = ""
 
 
-def info_view_kb():
+def info_view_kb(user_id):
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -48,6 +48,15 @@ def info_view_kb():
         callback_data=InfoView(
             action="Schedule_check",
             name="-"
+            ).pack()
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+        text="Мой профиль",
+        callback_data=ProfileView(
+            action="View_my_profile",
+            telegram_id=user_id
             ).pack()
         )
     )
@@ -71,7 +80,6 @@ def info_view_kb():
     ))
     return builder.as_markup()
 
-
 def back_to_info_kb(
         name: str,
         user_id: int, 
@@ -88,6 +96,41 @@ def back_to_info_kb(
                 ).pack()
             )
         )
+    builder.row(
+        InlineKeyboardButton(
+        text="Вернуться к просмотру информации",
+        callback_data=InfoView(
+            action="Return_to_info_view",
+            name="-"
+            ).pack()
+        )
+    )
+    return builder.as_markup()
+
+
+class ProfileView(CallbackData, prefix="pag"):
+    action: str
+
+
+def profile_view_kb():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+        text="Изменить псевдоним",
+        callback_data=ProfileView(
+            action="Change_name",
+            ).pack()
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+        text="Изменить биографию",
+        callback_data=ProfileView(
+            action="Change_bio",
+            ).pack()
+        )
+    )
+
     builder.row(
         InlineKeyboardButton(
         text="Вернуться к просмотру информации",
@@ -236,7 +279,7 @@ class BookInfo(CallbackData, prefix="pag"):
     book_id: int
 
 
-def book_info_kb(book_id: int):
+def book_info_kb(book_id: int, user_id: int):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(
         text="Описание книги",
@@ -247,15 +290,41 @@ def book_info_kb(book_id: int):
             )
         )
     
-    builder.row(InlineKeyboardButton(
-        text="Дополнительная информация о книге",
-        callback_data=BookInfo(
-            action="book_additional_info_check",
-            book_id=book_id
-            ).pack()
+    builder.row(
+        InlineKeyboardButton(
+            text="Дополнительная информация о книге",
+            callback_data=BookInfo(
+                action="book_additional_info_check",
+                book_id=book_id
+                ).pack()
+                )
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text="Дополнительная информация о книге",
+            callback_data=BookInfo(
+                action="book_additional_info_check",
+                book_id=book_id
+                ).pack()
+                )
+        )
+    
+    user = ProfilesDatabase(user_id)
+
+    if not user.is_book_favorite(book_id=book_id):
+        builder.row(
+            InlineKeyboardButton(
+                text="В избранное",
+                callback_data=BookInfo(action="add_book_to_favorites", book_id=book_id).pack()
             )
         )
-
+    else:
+        builder.row(
+            InlineKeyboardButton(
+                text="Удалить из избранного",
+                callback_data=BookInfo(action="remove_book_from_favorites", book_id=book_id).pack()
+            )
+        )
     builder.row(
         InlineKeyboardButton(
             text="Назад",
