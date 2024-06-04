@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 
-from utils.database import BookDatabase, AdminDatabase, InfoDatabase
+from utils.database import BookDatabase, AdminDatabase, InfoDatabase, ProfilesDatabase
 
 
 class MainMenu(CallbackData, prefix="pag"):
@@ -279,7 +279,7 @@ class BookInfo(CallbackData, prefix="pag"):
     book_id: int
 
 
-def book_info_kb(book_id: int):
+def book_info_kb(book_id: int, user_id: int):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(
         text="Описание книги",
@@ -290,15 +290,41 @@ def book_info_kb(book_id: int):
             )
         )
     
-    builder.row(InlineKeyboardButton(
-        text="Дополнительная информация о книге",
-        callback_data=BookInfo(
-            action="book_additional_info_check",
-            book_id=book_id
-            ).pack()
+    builder.row(
+        InlineKeyboardButton(
+            text="Дополнительная информация о книге",
+            callback_data=BookInfo(
+                action="book_additional_info_check",
+                book_id=book_id
+                ).pack()
+                )
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text="Дополнительная информация о книге",
+            callback_data=BookInfo(
+                action="book_additional_info_check",
+                book_id=book_id
+                ).pack()
+                )
+        )
+    
+    user = ProfilesDatabase(user_id)
+
+    if not user.is_book_favorite(book_id=book_id):
+        builder.row(
+            InlineKeyboardButton(
+                text="В избранное",
+                callback_data=BookInfo(action="add_book_to_favorites", book_id=book_id).pack()
             )
         )
-
+    else:
+        builder.row(
+            InlineKeyboardButton(
+                text="Удалить из избранного",
+                callback_data=BookInfo(action="remove_book_from_favorites", book_id=book_id).pack()
+            )
+        )
     builder.row(
         InlineKeyboardButton(
             text="Назад",

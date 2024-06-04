@@ -37,6 +37,7 @@ class ProfilesDatabase(Database):
         self._telegram_id: int = self._all_data["telegram_id"]
         self._name: str = self._all_data["name"]
         self._bio: str = self._all_data["bio"]
+        self._favorite_books_ids: list = self._all_data["favorite_books_ids"]
         self._join_date: datetime.date = self._all_data["join_date"]
 
     @staticmethod
@@ -47,6 +48,7 @@ class ProfilesDatabase(Database):
                                 telegram_id INTEGER NOT NULL UNIQUE,
                                 name TEXT DEFAULT NULL,
                                 bio TEXT DEFAULT 'Описание отсутствует',
+                                favorite_books TEXT,
                                 join_date DATE NOT NULL
                                 )"""
                                 )
@@ -65,19 +67,21 @@ class ProfilesDatabase(Database):
 
         with sqlite3.connect("db.db") as db:
             cursor = db.cursor()
-            data = cursor.execute(
+            data = list(cursor.execute(
                 """SELECT *
                 FROM profiles
                 WHERE telegram_id = ?""",
                 (telegram_id,)
-            ).fetchone()
-            
+            ).fetchone())
+            data[4] = [] if data[4] in ("  ", " ", "") else data[4]
+            # print(f"!{data[4]}!")
             return {
                 "id": int(data[0]),
                 "telegram_id": data[1],
                 "name": data[2],
                 "bio": data[3],
-                "join_date": datetime.datetime.strptime(data[4], "%Y-%m-%d").date().strftime("%d.%m.%Y")
+                "favorite_books_ids": [int(book_id) for book_id in data[4][1:-1].split("  ")] if data[4] else [],
+                "join_date": datetime.datetime.strptime(data[5], "%Y-%m-%d").date().strftime("%d.%m.%Y")
             }
     
     @staticmethod
@@ -114,6 +118,64 @@ class ProfilesDatabase(Database):
             print(e)
             return False
 
+    def add_favorite_book(self, book_id: int) -> True | False:
+        """
+        Назначает книгу любимой для пользователя.
+        В таблице хранятся в таком формате (через пробел):
+        айди_книги1 айди_книги2 айди_книги3
+
+        :param book_id: id книги
+        :return: True - успех, False - возникла ошибка или книга уже является любимой
+        """
+        try:
+            if int(book_id) in self._favorite_books_ids:
+                return False
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute("""
+                            UPDATE profiles 
+                            SET favorite_books = COALESCE(favorite_books, '') || ?  
+                            WHERE id = ?""", (" " + str(book_id) + " ", self._id)
+                            )
+                self._favorite_books_ids.append(int(book_id))
+            return True
+        except Exception as e:
+            print(e)
+            return False
+        
+    def is_book_favorite(self, book_id: int) -> bool:
+        """
+        Проверяет, находится ли книга в списке любимых книг пользователя
+
+        :param book_id: id книги
+        """
+        return(bool(int(book_id) in self._favorite_books_ids))
+            
+
+    def remove_favorite_book(self, book_id: int) -> True | False:
+        """
+        Удаляет книгу из списка любимых книг пользователяы
+
+        :param book_id: id книги
+        :return True - успех, False - возникла ошибка или книга не является любимой
+        """
+        try:
+            if book_id not in self._favorite_books_ids:
+                print("wef")
+                return False
+            with sqlite3.connect("db.db") as db:
+                self._favorite_books_ids.remove(int(book_id))
+                
+                formated_favorite_books_ids = None if not self._favorite_books_ids else \
+                    " " + "  ".join([str(book_id) for book_id in self._favorite_books_ids]) + " "
+                db.cursor().execute(
+                    "UPDATE profiles SET favorite_books = ? WHERE id = ?", 
+                    (formated_favorite_books_ids, self._id)
+                    )
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
     def change_bio(self, bio: str) -> True | False:
         """
         Изменяет биографию пользователя
@@ -127,6 +189,7 @@ class ProfilesDatabase(Database):
                     """UPDATE profiles SET bio = ? WHERE id = ?""",
                     (bio, self._id)
                 )
+                self._bio = bio
                 return True
         except Exception as e:
             print(e)
@@ -142,9 +205,10 @@ class ProfilesDatabase(Database):
         try:
             with sqlite3.connect("db.db") as db:
                 db.cursor().execute(
-                    """UPDATE profiles SET name = ? WHERE id = ?""",
+                    "UPDATE profiles SET name = ? WHERE id = ?",
                     (name, self._id)
                 )
+                self._name = name
                 return True
         except Exception as e:
             print(e)

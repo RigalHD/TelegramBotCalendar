@@ -3,7 +3,7 @@ from aiogram.types import FSInputFile, CallbackQuery
 from all_keyboards import inline_keyboards
 from config import all_books_image_path
 from aiogram import Router, F
-from utils.database import BookDatabase
+from utils.database import BookDatabase, ProfilesDatabase
 from aiogram.types.input_media_photo import InputMediaPhoto
 
 router = Router()
@@ -30,7 +30,7 @@ async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards
     
     await query.message.edit_caption(
         caption=f"Узнай о книге \"{book.get_book_info('name')}\" больше",
-        reply_markup=inline_keyboards.book_info_kb(book.id)
+        reply_markup=inline_keyboards.book_info_kb(book.id, query.from_user.id)
         )
 
 
@@ -70,12 +70,32 @@ async def book_addditional_info_handler(query: CallbackQuery, callback_data: inl
         reply_markup=inline_keyboards.book_info_additions_kb(book.id))
 
 
+@router.callback_query(inline_keyboards.BookInfo.filter(F.action.in_(("add_book_to_favorites", "remove_book_from_favorites"))))
+async def book_add_to_favorites_handler(query: CallbackQuery, callback_data: inline_keyboards.BookInfo):
+    book = BookDatabase(int(callback_data.book_id))
+    user = ProfilesDatabase(query.from_user.id)
+    
+    if callback_data.action == "add_book_to_favorites":
+        if user.add_favorite_book(book.id):
+            final_message_text = f"Вы успешно добавили книгу \"{book.get_book_info('name')}\" в избранное"
+        else:
+            final_message_text = "Возникла ошибка при добавлении книги в избранное"
+    else:
+        if user.remove_favorite_book(book.id):
+            final_message_text = f"Вы успешно удалили книгу \"{book.get_book_info('name')}\" из избранного"
+        else:
+            final_message_text = "Возникла ошибка!"
+    await query.bot.answer_callback_query(
+        text=final_message_text,
+        callback_query_id=query.id
+    )
+    
 @router.callback_query(inline_keyboards.BookInfo.filter(F.action == "return_back_to_book_info"))
 async def bookinfo_back_to_info_handler(query: CallbackQuery, callback_data: inline_keyboards.BookInfo):
     book = BookDatabase(int(callback_data.book_id))
     await query.message.edit_caption(
         caption=f"Узнай о книге \"{book.get_book_info('name')}\" больше",
-        reply_markup=inline_keyboards.book_info_kb(book_id=callback_data.book_id)
+        reply_markup=inline_keyboards.book_info_kb(book.id, query.from_user.id)
     )
 
 
