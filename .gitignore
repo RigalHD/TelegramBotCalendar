@@ -15,3 +15,5 @@ qq.sqlite3
 
 FileNotFoundErrors.txt
 *.txt
+
+!requirements.txt
