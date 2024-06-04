@@ -2,6 +2,7 @@ from aiogram.types import FSInputFile
 from aiogram.types.input_media_photo import InputMediaPhoto
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from abc import ABC, abstractmethod
+from typing import Union
 from config import GROUP_ID
 import sqlite3
 import datetime
@@ -9,9 +10,6 @@ import datetime
 
 class Database:
     def __init__(self):
-        pass
-    
-    def renew_table(self):
         pass
 
     def get_colunms_names(self, table_name: str) -> tuple | None:
@@ -29,6 +27,212 @@ class Database:
             except Exception as e:
                 print(e)
                 return None
+
+
+class ProfilesDatabase(Database):
+    def __init__(self, telegram_id: int):
+        self._all_data: dict[str: Union[int, str, None, datetime.date]] = \
+            ProfilesDatabase.get_profile_info(telegram_id)
+        self._id: int = self._all_data["id"]
+        self._telegram_id: int = self._all_data["telegram_id"]
+        self._name: str = self._all_data["name"]
+        self._bio: str = self._all_data["bio"]
+        self._favorite_books_ids: list = self._all_data["favorite_books_ids"]
+        self._join_date: datetime.date = self._all_data["join_date"]
+
+    @staticmethod
+    def renew_table() -> None:
+        with sqlite3.connect("db.db") as db:
+            db.cursor().execute("""CREATE TABLE IF NOT EXISTS profiles(
+                                id INTEGER PRIMARY KEY, 
+                                telegram_id INTEGER NOT NULL UNIQUE,
+                                name TEXT DEFAULT NULL,
+                                bio TEXT DEFAULT 'Описание отсутствует',
+                                favorite_books TEXT,
+                                join_date DATE NOT NULL
+                                )"""
+                                )
+
+    @staticmethod
+    def get_profile_info(
+        telegram_id: int
+        ) -> dict[str: Union[int, str, None, datetime.date]]:
+        """
+        Возвращает словарь, в котором находятся все данные о пользователе
+        
+        :param telegram_id: telegram id пользователя
+        """
+        if not ProfilesDatabase.does_profile_exist(telegram_id):
+            ProfilesDatabase.add_profile(telegram_id)
+
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            data = list(cursor.execute(
+                """SELECT *
+                FROM profiles
+                WHERE telegram_id = ?""",
+                (telegram_id,)
+            ).fetchone())
+            data[4] = [] if data[4] in ("  ", " ", "") else data[4]
+            # print(f"!{data[4]}!")
+            return {
+                "id": int(data[0]),
+                "telegram_id": data[1],
+                "name": data[2],
+                "bio": data[3],
+                "favorite_books_ids": [int(book_id) for book_id in data[4][1:-1].split("  ")] if data[4] else [],
+                "join_date": datetime.datetime.strptime(data[5], "%Y-%m-%d").date().strftime("%d.%m.%Y")
+            }
+    
+    @staticmethod
+    def does_profile_exist(telegram_id: int) -> bool:
+        """
+        :param telegram_id: telegram id пользователя
+        :return: True - профиль пользователя существует, False - нет
+        """
+        ProfilesDatabase.renew_table()
+        with sqlite3.connect("db.db") as db:
+            return bool(db.cursor().execute(
+                "SELECT COUNT(*) FROM profiles WHERE telegram_id = ?""", 
+                (telegram_id,)
+                ).fetchone()[0]
+            )
+
+    @staticmethod
+    def add_profile(telegram_id: int) -> True | False:
+        """
+        Добавляет новый профиль в таблицу,
+        если такого еще нет
+
+        :param telegram_id: telegram id пользователя
+        :return: True - успех, False - возникла ошибка, или пользователь уже существует
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                cursor = db.cursor()
+                cursor.execute(
+                    "INSERT INTO profiles(telegram_id, join_date) VALUES(?, ?)",
+                    (telegram_id, datetime.datetime.now().date())
+                )
+        except Exception as e:
+            print(e)
+            return False
+
+    def add_favorite_book(self, book_id: int) -> True | False:
+        """
+        Назначает книгу любимой для пользователя.
+        В таблице хранятся в таком формате (через пробел):
+        айди_книги1 айди_книги2 айди_книги3
+
+        :param book_id: id книги
+        :return: True - успех, False - возникла ошибка или книга уже является любимой
+        """
+        try:
+            if int(book_id) in self._favorite_books_ids:
+                return False
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute("""
+                            UPDATE profiles 
+                            SET favorite_books = COALESCE(favorite_books, '') || ?  
+                            WHERE id = ?""", (" " + str(book_id) + " ", self._id)
+                            )
+                self._favorite_books_ids.append(int(book_id))
+            return True
+        except Exception as e:
+            print(e)
+            return False
+        
+    def is_book_favorite(self, book_id: int) -> bool:
+        """
+        Проверяет, находится ли книга в списке любимых книг пользователя
+
+        :param book_id: id книги
+        """
+        return(bool(int(book_id) in self._favorite_books_ids))
+            
+
+    def remove_favorite_book(self, book_id: int) -> True | False:
+        """
+        Удаляет книгу из списка любимых книг пользователяы
+
+        :param book_id: id книги
+        :return True - успех, False - возникла ошибка или книга не является любимой
+        """
+        try:
+            if book_id not in self._favorite_books_ids:
+                print("wef")
+                return False
+            with sqlite3.connect("db.db") as db:
+                self._favorite_books_ids.remove(int(book_id))
+                
+                formated_favorite_books_ids = None if not self._favorite_books_ids else \
+                    " " + "  ".join([str(book_id) for book_id in self._favorite_books_ids]) + " "
+                db.cursor().execute(
+                    "UPDATE profiles SET favorite_books = ? WHERE id = ?", 
+                    (formated_favorite_books_ids, self._id)
+                    )
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
+    def change_bio(self, bio: str) -> True | False:
+        """
+        Изменяет биографию пользователя
+        
+        :param bio: новая биография пользователя
+        :return: True - успех, False - возникла ошибка
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    """UPDATE profiles SET bio = ? WHERE id = ?""",
+                    (bio, self._id)
+                )
+                self._bio = bio
+                return True
+        except Exception as e:
+            print(e)
+            return False
+        
+    def change_name(self, name: str) -> True | False:
+        """
+        Изменяет имя профиля пользователя
+        
+        :param name: новое имя пользователя
+        :return: True - успех, False - возникла ошибка
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                db.cursor().execute(
+                    "UPDATE profiles SET name = ? WHERE id = ?",
+                    (name, self._id)
+                )
+                self._name = name
+                return True
+        except Exception as e:
+            print(e)
+            return False
+    
+    @property
+    def id(self) -> int:
+        return self._id
+    
+    @property
+    def telegram_id(self) -> int:
+        return self._telegram_id
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def bio(self) -> str:
+        return self._bio
+    
+    @property
+    def join_date(self) -> datetime.date:
+        return self._join_date
 
 
 class InfoDatabase(Database):
@@ -108,7 +312,7 @@ class AdminDatabase(Database):
                 admin_level INTEGER,
                 join_date DATETIME
                 )"""
-                )
+            )
 
     @staticmethod   
     def add_admin(admin_id: int, admin_level: int = 0) -> None:
@@ -181,11 +385,25 @@ class AdminDatabase(Database):
 
 
 class SchedulerDatabase(Database):
-    def __init__(self, id: int, date_time: datetime.datetime):
-        self._id: int = id
-        self._date_time: datetime.datetime = date_time
-        self._expired: bool = False
-
+    def __init__(self, _id: int | str):
+        self._all_data = SchedulerDatabase.get_meeting_info(id=int(_id))
+        self._id: int = int(_id)
+        self._description: str = self.all_data[1]
+        self._date_time = datetime.datetime.strptime(
+            f"{self.all_data[2]} {self.all_data[3]}",
+            "%d.%m.%Y %H:%M"
+        )
+        self._expired: bool = self.all_data[3]
+    
+    @staticmethod
+    def get_meeting_info(id: int) -> tuple:
+        """
+        По полученному айди возвращает кортеж
+        с информацией о встрече книжного клуба
+        """
+        with sqlite3.connect("db.db") as db:
+            return db.cursor().execute("SELECT * FROM schedule WHERE id = ?", (id,)).fetchone()
+        
     @staticmethod
     def renew_table() -> None:
         with sqlite3.connect("db.db") as db:
@@ -201,6 +419,35 @@ class SchedulerDatabase(Database):
                 )"""
             )
 
+    @staticmethod
+    def get_schedule() -> tuple:
+        """
+        Возвращает кортеж всех запланированных и непрошедших встреч
+        """
+        result = []
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            SchedulerDatabase.renew_table()
+            meetings_ds = cursor.execute("SELECT id FROM schedule WHERE expired = 0").fetchall()
+            for data in meetings_ds:
+                meeting = SchedulerDatabase(data[0])
+                if not meeting.is_expired():
+                    result.append(meeting)
+
+        return tuple(result)
+    
+    @staticmethod
+    def get_actual_meeting() -> tuple:
+        """
+        Возвращает объект класса SchedulerDatabase,
+        в котором содержится информация о предстоящей встрече книжного клуба
+        """
+        with sqlite3.connect("db.db") as db:
+            return SchedulerDatabase(
+                db.cursor().execute(
+                    "SELECT id FROM schedule WHERE expired = 0 ORDER BY day DESC"
+                    ).fetchone()[0]
+                )
 
     @staticmethod
     def add_meeting(
@@ -208,7 +455,9 @@ class SchedulerDatabase(Database):
         reminder_function,
         ) -> True | False:
         """
-        Добавляет новую встречу в таблицу расписаний.
+        Добавляет новую встречу в таблицу расписаний
+        и включает "напоминалку" об этой встрече.
+
         Возвращает True, если встреча была успешно добавлена,
         иначе - False.
 
@@ -236,12 +485,11 @@ class SchedulerDatabase(Database):
                             data
                 ).fetchone()[0]
 
-                SchedulerDatabase.add_job(
-                    data=data,
-                    id=meeting_id,
-                    reminder_function=reminder_function
-                )
-                return True
+            SchedulerDatabase.add_job(
+                meeting=SchedulerDatabase(meeting_id),
+                reminder_function=reminder_function
+            )
+            return True
             
         except Exception as e:
             print(e)
@@ -249,25 +497,22 @@ class SchedulerDatabase(Database):
 
     @staticmethod
     def add_job(
-        data: tuple | list,
-        id: int,
+        meeting,
         reminder_function
         ) -> None:
         """
         Добавляет "работу" через библиотеку apscheduler
-        :param data: данные о встрече
-        :param id: id встречи в таблице
+        :param meeting: объект класса SchedulerDatabase
         :param reminder_function: функция, отправляющая напоминание
         """
-        hour, minute = data[2].split(":")
-        new_job_id = "scheduler_job_" + str(id)
-                
-        info_message = f"""Внимание! Напоминаем о встрече книжного клуба!
-        Что на ней будет? - <b>{data[0]}</b>
-        Когда она будет? - <b>{hour}:{minute}</b>
-        Во сколько приходить? - <b>{data[1]}</b> """
+        new_job_id = "scheduler_job_" + str(meeting.id)
+        info_message = f"""Информация о следующей встрече книжного клуба:
+        Что на ней будет? - <b>{meeting.description}</b>
+        Когда она будет? - <b>{meeting.date_time.date().strftime("%d.%m.%y")}</b>
+        Во сколько приходить? - <b>{str(meeting.date_time.time())[:-3]}</b>
+        """
 
-        day, month, year = data[1].replace(",", ".").split(".")
+        day, month, year = meeting.date_time.strftime("%d.%m.%Y").split(".")
         date = datetime.datetime.strptime(f'{year}-{month}-{day}', "%Y-%m-%d") + datetime.timedelta(days=1)
         scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
         scheduler.add_job(
@@ -284,14 +529,16 @@ class SchedulerDatabase(Database):
             },
             id=new_job_id
         )
-
         scheduler.start()
 
-    def make_expired_if_expired(self) -> None:
+    def is_expired(self) -> True | False:
         """
         Устанавливает статус встречи как просроченную,
-        если она является таковой
+        если она является таковой и возращает True,
+        если же встреча не просрочена, то возвращает False
         """
+        if self._expired is True:
+            return True
         if datetime.datetime.now() > self._date_time:
             with sqlite3.connect("db.db") as db:
                 db.cursor().execute(
@@ -299,17 +546,24 @@ class SchedulerDatabase(Database):
                     (self._id,)
                 )
             self._expired = True
-
-
-    def is_expired(self) -> True | False:
-        self.make_expired_if_expired()
-        if self._expired == True:
             return True
         return False
-
+    
     @property
     def id(self) -> int:
         return self._id
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @property
+    def date_time(self) -> datetime.datetime:
+        return self._date_time
+
+    @property
+    def all_data(self) -> tuple:
+        return self._all_data
 
 
 class BookDatabase(Database):
@@ -336,7 +590,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
 
-    
     @staticmethod
     def get_colunms_names(full: bool = False) -> list | None:
         """
@@ -403,7 +656,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
             return None
-        
     
     @staticmethod
     def get_amount_of_books(amount: int) -> dict:
@@ -531,7 +783,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
             return None
-        
         
     def get_book_info(self, column_name: str) -> str | None:
         """
