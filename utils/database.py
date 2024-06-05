@@ -137,6 +137,7 @@ class ProfilesDatabase(Database):
                             WHERE id = ?""", (" " + str(book_id) + " ", self._id)
                             )
                 self._favorite_books_ids.append(int(book_id))
+                db.cursor().execute("UPDATE books SET rating = rating + 1 WHERE id = ?", (int(book_id),))
             return True
         except Exception as e:
             print(e)
@@ -160,7 +161,6 @@ class ProfilesDatabase(Database):
         """
         try:
             if book_id not in self._favorite_books_ids:
-                print("wef")
                 return False
             with sqlite3.connect("db.db") as db:
                 self._favorite_books_ids.remove(int(book_id))
@@ -171,6 +171,7 @@ class ProfilesDatabase(Database):
                     "UPDATE profiles SET favorite_books = ? WHERE id = ?", 
                     (formated_favorite_books_ids, self._id)
                     )
+                db.cursor().execute("UPDATE books SET rating = rating - 1 WHERE id = ?", (int(book_id),))
             return True
         except Exception as e:
             print(e)
@@ -569,6 +570,8 @@ class SchedulerDatabase(Database):
 class BookDatabase(Database):
     def __init__(self, id: int):
         self._id: int = id
+        self._name: str = self.get_book_info("name")
+        self._description: str = self.get_book_info("description")
         self.BOOKS_COLUMNS_RUS_NAMES: tuple = (
             "Название", "Описание", "Автор", "Жанр",
             "Год", "Экранизации", "Рейтинг", "Возраcт"
@@ -658,18 +661,35 @@ class BookDatabase(Database):
             return None
     
     @staticmethod
+    def get_most_favorite_books_ids(amount: int) -> tuple:
+        """
+        Возвращает айди книг, отсортированных по их рейтингу
+
+        :param amount - количество книг в словаре
+        """
+        try:
+            with sqlite3.connect("db.db") as db:
+                books_ids = db.cursor().execute(
+                    "SELECT id FROM books ORDER BY rating DESC"
+                    ).fetchall()
+            return tuple(_id[0] for _id in books_ids[:abs(amount)])
+        except Exception as e:
+            print(e)
+            return None
+
+    @staticmethod
     def get_amount_of_books(amount: int) -> dict:
         """
         Возвращает словарь последних книг (по количеству, указанному в параметре amout)
             {
-            айди: {
-            "колонка": "информация",
-            "колонка2": "информация2",
-                },
-            айди2: {
-            "колонка": "информация",
-            "колонка2": "информация2",
-            }, ...
+                айди: {
+                "колонка": "информация",
+                "колонка2": "информация2",
+                    },
+                айди2: {
+                "колонка": "информация",
+                "колонка2": "информация2",
+                }, ...
             }
         или возвращает None, если возникла ошибка или книг нет
         """
@@ -703,7 +723,7 @@ class BookDatabase(Database):
                     genre CHAR,
                     year INTEGER,
                     film_adaptations TEXT,
-                    rating REAL,
+                    rating INTEGER DEFAULT 0,
                     age_rating CHAR,
                     image BLOB DEFAULT NULL
                     )""")
@@ -737,7 +757,7 @@ class BookDatabase(Database):
             has_name: bool = True,
             has_description: bool = True,
             has_image: bool = False,
-            has_rus_copolumns: bool = False,
+            has_rus_columns: bool = False,
            ) -> dict | None:
         """
         Возвращает словарь c информацией ("Имя колонки в таблицу": "информация")
@@ -747,7 +767,7 @@ class BookDatabase(Database):
         :param has_name: True - итог без изменений, False - название книги не будет в итоговом словаре
         :param has_description: True - итог без изменений, False - описание книги не будет в итоговом словаре
         :param has_image: True - итог без изменений, False - обложка книги не будет в итоговом словаре
-        :param has_rus_copolumns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке
+        :param has_rus_columns: True - имена колонок будут на русском языке, False - имена колонок будут на английском языке
         """
         
         try:
@@ -774,7 +794,7 @@ class BookDatabase(Database):
                 result.pop("image")
             if result["rating"] is None: # У книги может быть еще не определен рейтинг
                 result.pop("rating")
-            if has_rus_copolumns:
+            if has_rus_columns:
                 for el in self.get_columns_names_dict(full=True).items():
                     if el[1] in result:
                         result[el[0]] = result[el[1]]
@@ -840,3 +860,10 @@ class BookDatabase(Database):
     def id(self) -> int:
         return self._id
     
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def description(self) -> str:
+        return self._description

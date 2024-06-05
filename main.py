@@ -10,9 +10,9 @@ from config import main_menu_image_path
 from utils import database
 from aiogram.types import Message, FSInputFile
 from main_commands import (
+    db_commands,
     main_menu,
     states,
-    db_creating_commands,
     booksview,
 )
 
@@ -44,9 +44,15 @@ async def sender_of_reminds():
 
 
 async def main():
+    database.AdminDatabase.renew_table()
+    database.BookDatabase.renew_table()
+    database.InfoDatabase.renew_table()
+    database.SchedulerDatabase.renew_table()
+    database.ProfilesDatabase.renew_table()
+
     dp.include_routers(
         states.router,
-        db_creating_commands.router,
+        db_commands.router,
         main_menu.router,
         booksview.router,
     )

@@ -7,7 +7,6 @@ from utils.database import BookDatabase, AdminDatabase, InfoDatabase, ProfilesDa
 
 class MainMenu(CallbackData, prefix="pag"):
     action: str
-    user_id: int = 0
 
 
 def main_menu_kb(user_id: int):
@@ -29,7 +28,7 @@ def main_menu_kb(user_id: int):
         builder.row(
             InlineKeyboardButton(
             text="Админ панель",
-            callback_data=MainMenu(action="Admin_panel_view", user_id=user_id).pack(),
+            callback_data=MainMenu(action="Admin_panel_view").pack(),
             ),
         )
     return builder.as_markup()
@@ -40,7 +39,7 @@ class InfoView(CallbackData, prefix="pag"):
     name: str = ""
 
 
-def info_view_kb(user_id):
+def info_view_kb():
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -56,7 +55,6 @@ def info_view_kb(user_id):
         text="Мой профиль",
         callback_data=ProfileView(
             action="View_my_profile",
-            telegram_id=user_id
             ).pack()
         )
     )
@@ -200,6 +198,7 @@ def admin_panel_kb(user_id: int):
 class BookList(CallbackData, prefix="pag"):
     action: str
     book_id: int
+    return_back_button_action: str
 
 
 class SwitchBooksViewPage(CallbackData, prefix="pag"):
@@ -207,67 +206,100 @@ class SwitchBooksViewPage(CallbackData, prefix="pag"):
     page: int
 
 
-def all_books_kb(page: int = 0):
-    books_dict = BookDatabase.get_all_books()
+def books_kb():
     builder = InlineKeyboardBuilder()
-    if books_dict:
-        try:
-            for book_id in tuple(books_dict.keys())[page * 4 : (page + 1) * 4]:
-                builder.row(
-                    InlineKeyboardButton(
-                        text=books_dict[book_id]["name"],
-                        callback_data=BookList(
-                            action="book_check",
-                            book_id=book_id
-                        ).pack()
-                    )
-                )
-        except IndexError:
-            for book_id in tuple(books_dict.keys())[page * 4 :]:
-                builder.row(
-                    InlineKeyboardButton(
-                        text=books_dict[book_id]["name"],
-                        callback_data=BookList(
-                            action="book_check",
-                            book_id=book_id
-                        ).pack()
-                    )
-                )
-    
-    next_page_button = InlineKeyboardButton(
-                text="След. страница",
-                callback_data=SwitchBooksViewPage(
-                    action="switch_page",
-                    page=page + 1
-                ).pack()
-            )
-    
-    previous_page_button = InlineKeyboardButton(
-                text="Пред. страница",
-                callback_data=SwitchBooksViewPage(
-                    action="switch_page",
-                    page=page - 1
-                ).pack()
-            )
-
-    switch_page_buttons = []
-    if page == 0:
-        next_page_button.text = "Следующая страница ------------>"
-        switch_page_buttons.append(next_page_button)
-
-    elif page == (len(books_dict.keys()) / 4) - 1\
-        or page == len(books_dict.keys()) // 4 + ((len(books_dict.keys()) % 4) // 4):
-        previous_page_button.text = "<------------ Предущая страница"
-        switch_page_buttons.append(previous_page_button)
-    else:
-        switch_page_buttons = [previous_page_button, next_page_button]
     builder.row(
-        *switch_page_buttons
+        InlineKeyboardButton(
+            text="Посмотреть все книги",
+            callback_data=MainMenu(
+                action="All_books_view"
+            ).pack()
+        ),
     )
+    builder.row(
+        InlineKeyboardButton(
+            text="Посмотреть самые популярные книги",
+            callback_data=MainMenu(
+                action="Most_favorite_books_view",
+            ).pack()
+        ),
+    )
+
     builder.row(
         InlineKeyboardButton(
             text="В главное меню",
             callback_data=MainMenu(action="Return_to_main_menu").pack()
+        )
+    )
+    return builder.as_markup()
+
+
+def all_books_kb(page: int = 0):
+    books_dict = BookDatabase.get_all_books()
+    builder = InlineKeyboardBuilder()
+    if books_dict:
+        # try:
+        for book_id in tuple(books_dict.keys())[page * 4 : (page + 1) * 4]:
+            builder.row(
+                InlineKeyboardButton(
+                    text=books_dict[book_id]["name"],
+                    callback_data=BookList(
+                        action="book_check",
+                        book_id=book_id,
+                        return_back_button_action="All_books_view"
+                    ).pack()
+                )
+            )
+        # except IndexError:
+        #     print("!")
+        #     for book_id in tuple(books_dict.keys())[page * 4 :]:
+        #         builder.row(
+        #             InlineKeyboardButton(
+        #                 text=books_dict[book_id]["name"],
+        #                 callback_data=BookList(
+        #                     action="book_check",
+        #                     book_id=book_id,
+        #                     return_back_button_action="All_books_view"
+        #                 ).pack()
+        #             )
+        #         )
+    
+        next_page_button = InlineKeyboardButton(
+                    text="След. страница",
+                    callback_data=SwitchBooksViewPage(
+                        action="switch_page",
+                        page=page + 1
+                    ).pack()
+                )
+        
+        previous_page_button = InlineKeyboardButton(
+                    text="Пред. страница",
+                    callback_data=SwitchBooksViewPage(
+                        action="switch_page",
+                        page=page - 1
+                    ).pack()
+                )
+
+        switch_page_buttons = []
+        if not 0 <= len(books_dict.keys()) <= 4:
+            if page == 0:
+                next_page_button.text = "Следующая страница ------------>"
+                switch_page_buttons.append(next_page_button)
+
+            elif page == (len(books_dict.keys()) / 4) - 1\
+                or page == len(books_dict.keys()) // 4 + ((len(books_dict.keys()) % 4) // 4):
+                previous_page_button.text = "<------------ Предущая страница"
+                switch_page_buttons.append(previous_page_button)
+            else:
+                switch_page_buttons = [previous_page_button, next_page_button]
+            builder.row(
+                *switch_page_buttons
+            )
+
+    builder.row(
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=MainMenu(action="Books_view").pack()
         )
     )
     
@@ -279,14 +311,15 @@ class BookInfo(CallbackData, prefix="pag"):
     book_id: int
 
 
-def book_info_kb(book_id: int, user_id: int):
+def book_info_kb(book_id: int, user_id: int, return_button: str):
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(
-        text="Описание книги",
-        callback_data=BookInfo(
-            action="book_description_check",
-            book_id=book_id
-            ).pack()
+    builder.row(
+        InlineKeyboardButton(
+            text="Описание книги",
+            callback_data=BookInfo(
+                action="book_description_check",
+                book_id=book_id,
+                ).pack()
             )
         )
     
@@ -295,18 +328,9 @@ def book_info_kb(book_id: int, user_id: int):
             text="Дополнительная информация о книге",
             callback_data=BookInfo(
                 action="book_additional_info_check",
-                book_id=book_id
+                book_id=book_id,
                 ).pack()
-                )
-        )
-    builder.row(
-        InlineKeyboardButton(
-            text="Дополнительная информация о книге",
-            callback_data=BookInfo(
-                action="book_additional_info_check",
-                book_id=book_id
-                ).pack()
-                )
+            )
         )
     
     user = ProfilesDatabase(user_id)
@@ -315,20 +339,29 @@ def book_info_kb(book_id: int, user_id: int):
         builder.row(
             InlineKeyboardButton(
                 text="В избранное",
-                callback_data=BookInfo(action="add_book_to_favorites", book_id=book_id).pack()
+                callback_data=BookInfo(
+                    action="add_book_to_favorites", 
+                    book_id=book_id,
+                    ).pack()
             )
         )
     else:
         builder.row(
             InlineKeyboardButton(
                 text="Удалить из избранного",
-                callback_data=BookInfo(action="remove_book_from_favorites", book_id=book_id).pack()
+                callback_data=BookInfo(
+                    action="remove_book_from_favorites", 
+                    book_id=book_id,
+                    ).pack()
             )
         )
+
     builder.row(
         InlineKeyboardButton(
             text="Назад",
-            callback_data=BookInfo(action="return_back", book_id=book_id).pack()
+            callback_data=MainMenu(
+                action=return_button
+                ).pack()
         )
     )
     return builder.as_markup()
@@ -336,9 +369,36 @@ def book_info_kb(book_id: int, user_id: int):
 
 def book_info_additions_kb(book_id: int):
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(
-        text="Назад",
-        callback_data=BookInfo(action="return_back_to_book_info", book_id=book_id).pack())
+    builder.row(
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=BookInfo(
+                action="return_back_to_book_info", 
+                book_id=book_id
+                ).pack()
+            )
         )
     return builder.as_markup()
 
+
+def most_favorite_books_kb():
+    builder = InlineKeyboardBuilder()
+    for book_id in BookDatabase.get_most_favorite_books_ids(5):
+        book = BookDatabase(book_id)
+        builder.row(
+            InlineKeyboardButton(
+                text=book.name,
+                callback_data=BookList(
+                    action="book_check",
+                    book_id=book.id,
+                    return_back_button_action="Most_favorite_books_view"
+                ).pack()
+            )
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=MainMenu(action="Books_view").pack()
+        )
+    )
+    return builder.as_markup()

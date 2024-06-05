@@ -20,6 +20,27 @@ router = Router()
 #         reply_markup=inline_keyboards.all_books_kb()
 #     )
 
+@router.callback_query(inline_keyboards.MainMenu.filter(F.action == "All_books_view"))
+async def all_books_view_handler(query: CallbackQuery, callback_data: inline_keyboards.MainMenu):
+    await query.message.edit_media(
+        media=InputMediaPhoto(media=FSInputFile(all_books_image_path)),
+    )
+    await query.message.edit_caption(
+        caption="Список всех книг. Страница: 1",
+        reply_markup=inline_keyboards.all_books_kb()
+    )
+
+
+@router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Most_favorite_books_view"))
+async def most_favorite_books_view_handler(query: CallbackQuery, callback_data: inline_keyboards.MainMenu):
+    await query.message.edit_media(
+        media=InputMediaPhoto(media=FSInputFile(all_books_image_path)),
+    )
+    await query.message.edit_caption(
+        caption="Самые популярные книги",
+        reply_markup=inline_keyboards.most_favorite_books_kb()
+    )
+
 
 @router.callback_query(inline_keyboards.BookList.filter(F.action == "book_check"))
 async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards.BookList):
@@ -30,7 +51,11 @@ async def booklist_handler(query: CallbackQuery, callback_data: inline_keyboards
     
     await query.message.edit_caption(
         caption=f"Узнай о книге \"{book.get_book_info('name')}\" больше",
-        reply_markup=inline_keyboards.book_info_kb(book.id, query.from_user.id)
+        reply_markup=inline_keyboards.book_info_kb(
+            book.id, 
+            query.from_user.id,
+            callback_data.return_back_button_action
+            )
         )
 
 
@@ -61,7 +86,7 @@ async def book_addditional_info_handler(query: CallbackQuery, callback_data: inl
             f"{key}: {value} \n{'-' * 20}" for key, value in book.get_full_book_info(
             has_name=False,
             has_description=False,
-            has_rus_copolumns=True
+            has_rus_columns=True
             ).items()
         ]
     )
@@ -95,17 +120,5 @@ async def bookinfo_back_to_info_handler(query: CallbackQuery, callback_data: inl
     book = BookDatabase(int(callback_data.book_id))
     await query.message.edit_caption(
         caption=f"Узнай о книге \"{book.get_book_info('name')}\" больше",
-        reply_markup=inline_keyboards.book_info_kb(book.id, query.from_user.id)
+        reply_markup=inline_keyboards.book_info_kb(book.id, query.from_user.id, callback_data.return_button)
     )
-
-
-@router.callback_query(inline_keyboards.BookInfo.filter(F.action == "return_back"))
-async def bookinfo_back_handler(query: CallbackQuery, callback_data: inline_keyboards.BookList):
-    await query.message.edit_media(
-        media=InputMediaPhoto(media=FSInputFile(all_books_image_path))
-    )
-    await query.message.edit_caption(
-        caption="Мы рекомендуем вам эти книги",
-        reply_markup=inline_keyboards.all_books_kb()
-    )
-    

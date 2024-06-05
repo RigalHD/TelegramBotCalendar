@@ -26,12 +26,12 @@ router = Router()
 
 @router.callback_query(inline_keyboards.MainMenu.filter(F.action == "Books_view"))
 async def books_view_handler(query: CallbackQuery, callback_data: inline_keyboards.MainMenu):
-    await query.message.edit_media(
-        media=InputMediaPhoto(media=FSInputFile(all_books_image_path)),
-    )
+    # await query.message.edit_media(
+    #     media=InputMediaPhoto(media=FSInputFile(all_books_image_path)),
+    # )
     await query.message.edit_caption(
-        caption="Список всех книг. Страница: 1",
-        reply_markup=inline_keyboards.all_books_kb()
+        caption="Просмотр книг",
+        reply_markup=inline_keyboards.books_kb()
     )
 
 
@@ -43,7 +43,7 @@ async def info_view_handler(query: CallbackQuery, callback_data: inline_keyboard
     
     await query.message.edit_caption(
         caption="Информация",
-        reply_markup=inline_keyboards.info_view_kb(query.from_user.id)
+        reply_markup=inline_keyboards.info_view_kb()
     )
 
 
@@ -109,7 +109,7 @@ async def return_to_info_view_handler(query: CallbackQuery, callback_data: inlin
     )
     await query.message.edit_caption(
         caption="Информация",
-        reply_markup=inline_keyboards.info_view_kb(query.from_user.id)
+        reply_markup=inline_keyboards.info_view_kb()
     )
 
 
