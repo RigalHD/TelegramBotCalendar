@@ -238,7 +238,6 @@ def all_books_kb(page: int = 0):
     books_dict = BookDatabase.get_all_books()
     builder = InlineKeyboardBuilder()
     if books_dict:
-        # try:
         for book_id in tuple(books_dict.keys())[page * 4 : (page + 1) * 4]:
             builder.row(
                 InlineKeyboardButton(
@@ -250,20 +249,7 @@ def all_books_kb(page: int = 0):
                     ).pack()
                 )
             )
-        # except IndexError:
-        #     print("!")
-        #     for book_id in tuple(books_dict.keys())[page * 4 :]:
-        #         builder.row(
-        #             InlineKeyboardButton(
-        #                 text=books_dict[book_id]["name"],
-        #                 callback_data=BookList(
-        #                     action="book_check",
-        #                     book_id=book_id,
-        #                     return_back_button_action="All_books_view"
-        #                 ).pack()
-        #             )
-        #         )
-    
+
         next_page_button = InlineKeyboardButton(
                     text="След. страница",
                     callback_data=SwitchBooksViewPage(

@@ -582,6 +582,27 @@ class BookDatabase(Database):
             )
         
     @staticmethod
+    def renew_table() -> None:
+        """
+        Создает таблицу книг, если таковой не было
+        """
+        with sqlite3.connect("db.db") as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS books (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    description TEXT,
+                    author CHAR,
+                    genre CHAR,
+                    year INTEGER,
+                    film_adaptations TEXT,
+                    rating INTEGER DEFAULT 0,
+                    age_rating CHAR,
+                    image BLOB DEFAULT NULL
+                           )""")
+            
+    @staticmethod
     def remove_book_by_id(id: int) -> None:
         """
         Удаляет книгу по ее айди
@@ -706,27 +727,6 @@ class BookDatabase(Database):
         except Exception as e:
             print(e)
             return None
-
-    @staticmethod
-    def renew_table() -> None:
-        """
-        Создает таблицу книг, если таковой не было
-        """
-        with sqlite3.connect("db.db") as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS books (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT,
-                    description TEXT,
-                    author CHAR,
-                    genre CHAR,
-                    year INTEGER,
-                    film_adaptations TEXT,
-                    rating INTEGER DEFAULT 0,
-                    age_rating CHAR,
-                    image BLOB DEFAULT NULL
-                    )""")
 
     def get_columns_names_dict(
             self,
